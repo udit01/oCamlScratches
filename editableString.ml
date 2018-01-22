@@ -2,22 +2,26 @@
 type a = Constructor of char
 
 
-(*would be a list of a ?*)
+(* and a = Constructor of char *)
 type a_star  = None | Character of a | Concatenation of a_star * a_star  
-(* and a = Constructor of char;; *)
 
-type editable_string = { mutable str : a list ;mutable marker: int ;mutable length: int}
+(* representation or after meaning is given to a_star, it becomes editable_string *)
+type editable_string = { mutable str : a list ;mutable marker: int ; mutable length: int}
 
 exception Empty of string
 
-(* from type a_star , return a list of characters *)
-let rec meaning a_st = match a_st with
-        None -> []
-    |   Character a -> [a]
-    |   Concatenation (a_st1,a_st2) -> (meaning a_st1) @ (meaning a_st2)
+(* from type a_str , return an editable_string *)
+let meaning a_st = 
+    let rec evaluate a_st = match a_st with
+            None -> []
+        |   Character a -> [a]
+        |   Concatenation (a_st1,a_st2) -> (evaluate a_st1) @ (evaluate a_st2) in
+    let listOfA = evaluate a_st in
+    let es = {str = listOfA ; marker = 0; length = List.length listOfA } in
+    es
 
-(* esw stands for editable string wrapper *)
-let lgh esw = match esw with
+(* es stands for editable string wrapper *)
+let lgh es = match es with
         {str = cl ; marker=m; length = l} -> l
         
         (* None -> 0 
@@ -25,7 +29,7 @@ let lgh esw = match esw with
     |   Concatenation (s1,s2) -> (lgh s1) + (lgh s2) *)
 
 
-let nonempty esw = match esw with
+let nonempty es = match es with
         {str=s ; marker=m; length = 0} ->false
     |   _ -> true
 
@@ -42,31 +46,31 @@ let explode s =
  (* initial position of the edit marker being 0 *)
 let create str = 
     let l = String.length str in    
-    let esw = { str = explode str ; marker = 0 ; length = l  } in
-    esw        
+    let es = { str = explode str ; marker = 0 ; length = l  } in
+    es        
 
 
 
 (*  What is its complexity? Also prove that lgh( concat s1 s2) = lgh(s1) + lgh(s2).*)
-let concat esw1 esw2 = 
-    let esw = { str =  esw1.str @ esw2.str  ; marker = 0 ; length = esw1.length + esw2.length } in
-    esw
+let concat es1 es2 = 
+    let es = { str =  es1.str @ es2.str  ; marker = 0 ; length = es1.length + es2.length } in
+    es
 
 
  (* Its complexity should be O(lgh(s)).  Also prove that  lgh(reverse s) = lgh(s). *)
-let reverse esw = 
-    let resw = { str = List.rev esw.str ; marker = esw.length - 1 - esw.marker ; length = esw.length} in
-    resw
+let reverse es = 
+    let res = { str = List.rev es.str ; marker = es.length - 1 - es.marker ; length = es.length} in
+    res
 
 
  (* [ This should be O(1). ] *)
-let rec first esw = match esw with
+let rec first es = match es with
         {str=s ; marker=m; length = 0} -> raise (Empty "No first element because string is empty!")
     |   {str=s ; marker=m; length = l} -> List.hd s
 
 
  (* [ This should be O(1). ] *)
-let rec last esw = match esw with
+let rec last es = match es with
         {str=s ; marker=m; length = 0} -> raise (Empty "No last element because string is empty!")
     |   {str=s ; marker=m; length = l} -> List.nth s (l-1)
 
@@ -74,9 +78,9 @@ let rec last esw = match esw with
 
 (* forward: When a marker points to the kth position in the string moves it to the (k+1)-th position, if it exists, and raising AtLast otherwise. [Complexity? Should be O(1). *)
 exception AtLast
-let forward esw = 
-    if (esw.marker >= esw.length - 1) then raise AtLast
-    else esw.marker <- esw.marker + 1
+let forward es = 
+    if (es.marker >= es.length - 1) then raise AtLast
+    else es.marker <- es.marker + 1
 (* should the above function return a new object? *)
 
 (* back: When the marker points to the kth position in the string moves it to the (k-1)-th position, if it exists, and raising AtFirst otherwise. [Complexity? Should be O(1). ] *)
@@ -103,12 +107,10 @@ let rec repElem list pos elem list2 idx =
             else
                 repElem t pos elem (list2 @ [h]) (idx+1)
 
-let replace w esw = 
-    (* let repEsw = {str = repElem esw.str esw.marker w [] 0  ; marker = esw.marker  ; length = esw.length} in
-    repEsw *)
-    esw.str <- repElem esw.str esw.marker w [] 0
+let replace w es = 
+    es.str <- repElem es.str es.marker w [] 0
 
 
 
-let () = print_string "Execution complete\n";;
+(* let () = print_string "Execution complete\n";; *)
 
