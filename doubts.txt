@@ -1,0 +1,9 @@
+Why is th below code producting error , ? it's taken from this tutorial https://ocaml.org/learn/tutorials/structure_of_ocaml_programs.html
+
+let b = "This started with"
+let s = "a very nonsensical message.";;
+print_endline b; print_endline s
+open String
+let s = concat "" ["Fortunately"; ", "; "the"; "end"; "is"; "near"; "."];;
+print_endline s;;
+let s = "let end here" in print_endline s
