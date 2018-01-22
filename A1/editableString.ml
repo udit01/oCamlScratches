@@ -1,3 +1,10 @@
+(* 
+Author -> Udit Jain
+Entry Number -> 2016CS10327 
+*)
+
+(* An efficient functional data type to represent editable strings (which can be arbitrarily long) over an arbitrary given alphabet. *)
+
 (* this type "a" will aready be given . 
     It's the alphabet over which a* is defined
 *)
