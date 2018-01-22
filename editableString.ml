@@ -1,4 +1,6 @@
-(* this type "a" will aready be given *)
+(* this type "a" will aready be given . 
+    It's the alphabet over which a* is defined
+*)
 type a = Constructor of char
 
 
@@ -8,7 +10,7 @@ type a_star  = None | Character of a | Concatenation of a_star * a_star
 (* representation or after meaning is given to a_star, it becomes editable_string *)
 type editable_string = { mutable str : a list ;mutable marker: int ; mutable length: int}
 
-exception Empty of string
+exception Empty
 
 (* from type a_str , return an editable_string *)
 let meaning a_st = 
@@ -47,7 +49,6 @@ let create str =
 
 
 (*  Time Complexity: O(es1.length)[because of @ operator defination] .
-
     To prove :lgh( concat s1 s2) = lgh(s1) + lgh(s2).
     In my implementation we have lgh(editable_string) = value of the length field and in the function defination I am directly 
         adding the two lengths, Hence proved.
@@ -65,23 +66,23 @@ let concat es1 es2 =
     Otherwise the List.rev function preserves the lenght of the list (given in documentation)
  *)
 let reverse es = 
-    let res = { str = List.rev es.str ; marker = es.length - 1 - es.marker ; length = es.length} in
+    let res = { str = List.rev es.str ; marker = if es.length <=0  then 0 else (es.length - 1 - es.marker) ; length = es.length} in
     res
 
 
  (* Time Complexity: O(1) *)
-let rec first es = match es with
-        {str=s ; marker=m; length = 0} -> raise (Empty "No first element because string is empty!")
+let first es = match es with
+        {str=s ; marker=m; length = 0} -> raise (Empty)
     |   {str=s ; marker=m; length = l} -> List.hd s
 
 
  (* Time Complexity: O(lgh s) because of List.nth (l - 1)
     We can do it in order 1 if while creating the string, we store the last character as an extra field in the editable_string record
     That will shift the computation time from here to creation of editable string object from ocaml string 
-    I have increased efficiency by storing and modifying the length and not calculating it everytime.
+    Moreover, I have increased efficiency by storing and modifying the length and not calculating it everytime.
   *)
-let rec last es = match es with
-        {str=s ; marker=m; length = 0} -> raise (Empty "No last element because string is empty!")
+let last es = match es with
+        {str=s ; marker=m; length = 0} -> raise (Empty )
     |   {str=s ; marker=m; length = l} -> List.nth s (l-1)
 
 
@@ -119,7 +120,7 @@ let rec repElem list pos elem list2 idx =
             else
                 repElem t pos elem (list2 @ [h]) (idx+1)
 
-(* replace: which (assuming the marker is at a position n>= 0) in a string s, and a letter w, replaces the letter at the n-th position of s with w.
+(* replace: which (assuming the marker is at a position n>= 0) in a string s, and a letter w, replaces the letter at the marker position of s with w.
   To Prove: lgh(replace w s) = lgh(s).
   Proof: In my implementation I am not modifying the length field , hence proved
   Otherwise by list property of substitution, we have that the lenght remains same.
