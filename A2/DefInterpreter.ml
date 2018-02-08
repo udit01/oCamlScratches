@@ -30,7 +30,7 @@ Provide enough examples
 (* type expBool =  *)
 
 type exp = 
-        T | F 
+        true | false 
         | Not of exp
         | Or of exp*exp
         | And of exp*exp
@@ -61,7 +61,14 @@ exception ExpNotMatched
 (* first define only for expInt then generalize  *)
 (* Eval function from exp -> Answer *)
 let rec eval e = match e with
-        Const n -> AnswerInt n
+        true -> AnswerBool true
+        | false -> AnswerBool false
+        | Not e1 -> let  ab1 = eval e1 in
+                        let bans = (match ab1 with
+                                AnswerBool b1 -> b1
+                                | _ -> raise NotABool) in
+                        AnswerBool (not bans)
+        | Const n -> AnswerInt n
         | Mod e1 -> ( let a = eval e1 in
                       let b = (match a with
                                 AnswerInt i -> i
