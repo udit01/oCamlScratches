@@ -34,6 +34,7 @@ type exp =
         | Not of exp
         | Or of exp*exp
         | And of exp*exp
+        | Xor of exp*exp
         | Implies of exp*exp
         | Const of int 
         | Mod of exp
@@ -49,6 +50,8 @@ type exp =
         | Gte of exp*exp
         | Lte of exp*exp
 
+        (* can add logical (bitwise) and or xor etc ? *)
+
 (* How to define nth tuples ? *)
 (* then the projection fuction ? *)
 (* Also introduce Vars of string ? *)
@@ -63,24 +66,139 @@ exception ExpNotMatched
 let rec eval e = match e with
         true -> AnswerBool true
         | false -> AnswerBool false
-        | Not e1 -> let  ab1 = eval e1 in
-                        let bans = (match ab1 with
-                                AnswerBool b1 -> b1
-                                | _ -> raise NotABool) in
-                        AnswerBool (not bans)
+        | Not e1 -> AnswerBool (not ( match (eval e1) with
+                                        AnswerBool b -> b
+                                        | _ -> raise NotABool ) )
+        | Or (e1, e2) -> AnswerBool((match (eval e1) with
+                                        AnswerBool b1 -> b1
+                                        | _ -> raise NotABool
+                                        )
+                                        ||(match (eval e2) with 
+                                        AnswerBool b2 -> b2
+                                        | _ -> raise NotABool
+                                        ))
+        | And (e1, e2) -> AnswerBool((match (eval e1) with
+                                        AnswerBool b1 -> b1
+                                        | _ -> raise NotABool
+                                        )
+                                        &&(match (eval e2) with 
+                                        AnswerBool b2 -> b2
+                                        | _ -> raise NotABool
+                                        ))
+        | Xor (e1, e2) -> AnswerBool(match 
+                                                ((match (eval e1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                ),
+                                                (match (eval e2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))
+
+                                                with 
+                                                  (true,true)   -> false
+                                                  | (true,false)  -> true
+                                                  | (false,true)  -> true
+                                                  | (false,false) -> false
+                                                )
+        | Implies (e1, e2) -> AnswerBool(match 
+                                                ((match (eval e1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                ),
+                                                (match (eval e2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))
+
+                                                with 
+                                                  (true,true)   -> true
+                                                  | (true,false)  -> false
+                                                  | (false,true)  -> true
+                                                  | (false,false) -> true
+                                                )
+        
         | Const n -> AnswerInt n
         | Mod e1 -> ( let a = eval e1 in
                       let b = (match a with
                                 AnswerInt i -> i
                                 | _ -> raise NotAnInt )in
                         AnswerInt (if (b>=0) then b else (-1*b)) )
-        | Plus (e1,e2) -> (let a1 = eval e1 in
-                          let a2 = eval e2 in 
-                          let ans = (match a1 with 
-                                AnswerInt i1 -> (match a2 with 
-                                                        AnswerInt i2 -> (i1+i2)
-                                                       | _ -> raise NotAnInt)
-                                |_ -> raise NotAnInt) in
-                           AnswerInt ans)
-
-        | _ -> raise ExpNotMatched
+        | Plus (e1,e2) -> AnswerInt ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        +
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Subt (e1,e2) -> AnswerInt ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        -
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Mult (e1,e2) -> AnswerInt ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        *
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Div (e1,e2) -> AnswerInt ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        /
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Pow (e1,e2) -> AnswerInt ( int_of_float(float_of_int(match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt)
+                                        **
+                                      float_of_int(match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt) ) )
+        | Max (e1,e2) -> AnswerInt ( max (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Min (e1,e2) -> AnswerInt ( min (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Gt (e1,e2) -> AnswerBool ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        >
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Lt (e1,e2) -> AnswerBool ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        <
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Gte (e1,e2) -> AnswerBool ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        >=
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        | Lte (e1,e2) -> AnswerBool ( (match (eval e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        <=
+                                      (match (eval e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
+        (* | _ -> raise ExpNotMatched *)
