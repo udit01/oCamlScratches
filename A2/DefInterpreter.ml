@@ -9,7 +9,7 @@ The expressions in the language are of the following forms
     Integer constants, 
     Unary arithmetic operations: abs, (and any other sensible ones you can think of),
     Identifiers, represented as (alphanumeric) strings
-    binary operations: + (addition), - (subtraction), * (multiplication), div, mod, ^ (exponentiation)
+    binary operations: + (addition), - (subtraction), * (Multiplication), div, mod, ^ (exponentiation)
     Boolean constants: T and F
     Unary boolean operation: not
     binary boolean operations:  /\ (and), \/ (or), -> (implies)
@@ -38,9 +38,9 @@ type exp =
         | Implies of exp*exp
         | Const of int 
         | Mod of exp
-        | Plus of exp*exp       
-        | Subt of exp*exp       
-        | Mult of exp*exp       
+        | Add of exp*exp       
+        | Sub of exp*exp       
+        | Mul of exp*exp       
         | Div of exp*exp       
         | Pow of exp*exp
         | Max of exp*exp
@@ -124,21 +124,21 @@ let rec eval e = match e with
                                 AnswerInt i -> i
                                 | _ -> raise NotAnInt )in
                         AnswerInt (if (b>=0) then b else (-1*b)) )
-        | Plus (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Add (e1,e2) -> AnswerInt ( (match (eval e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         +
                                       (match (eval e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Subt (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Sub (e1,e2) -> AnswerInt ( (match (eval e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         -
                                       (match (eval e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Mult (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Mul (e1,e2) -> AnswerInt ( (match (eval e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         *
@@ -202,3 +202,47 @@ let rec eval e = match e with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
         (* | _ -> raise ExpNotMatched *)
+
+
+type opcode = TRUE 
+            | FALSE 
+            | NOT 
+            | OR 
+            | AND
+            | XOR
+            | IMPLIES
+            | CONST of int
+            | MOD
+            | ADD
+            | SUB
+            | MUL
+            | DIV
+            | POW
+            | MAX
+            | MIN
+            | GT
+            | LT
+            | GTE
+            | LTE
+
+let rec compile e = match e with
+        true ->  [TRUE]
+        | false -> [FALSE]
+        | Not e1 -> (compile e1) @ [NOT]
+        | Or (e1, e2) -> (compile e1) @ (compile e2) @ [OR]
+        | And (e1, e2) -> (compile e1) @ (compile e2) @ [AND]
+        | Xor (e1, e2) -> (compile e1) @ (compile e2) @ [XOR]
+        | Implies (e1, e2) ->  (compile e1) @ (compile e2) @ [IMPLIES]
+        | Const n -> [CONST n]
+        | Mod e1 -> (compile e1) @ [MOD]
+        | Add (e1,e2) -> (compile e1) @ (compile e2) @ [ADD]
+        | Sub (e1,e2) -> (compile e1) @ (compile e2) @ [SUB]
+        | Mul (e1,e2) -> (compile e1) @ (compile e2) @ [MUL]
+        | Div (e1,e2) -> (compile e1) @ (compile e2) @ [DIV]
+        | Pow (e1,e2) ->  (compile e1) @ (compile e2) @ [POW]
+        | Max (e1,e2) ->  (compile e1) @ (compile e2) @ [MAX]
+        | Min (e1,e2) ->  (compile e1) @ (compile e2) @ [MIN]
+        | Gt (e1,e2) -> (compile e1) @ (compile e2) @ [GT]
+        | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
+        | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
+        | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
