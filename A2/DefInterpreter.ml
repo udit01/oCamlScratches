@@ -29,8 +29,11 @@ Provide enough examples
 
 (* type expBool =  *)
 
+type variable = B of bool | I of int 
+
 type exp = 
         true | false 
+        | Var of variable (*variable is arbitary you could change this and gamma*)
         | Not of exp
         | Or of exp*exp
         | And of exp*exp
@@ -54,43 +57,46 @@ type exp =
 
 (* How to define nth tuples ? *)
 (* then the projection fuction ? *)
-(* Also introduce Vars of string ? *)
+(* Also introduce Vars of variable ? *)
 
 type ans = AnswerInt of int | AnswerBool of bool
+
+(* let g1 =  *)
 
 exception NotABool
 exception NotAnInt
 exception ExpNotMatched
 (* first define only for expInt then generalize  *)
 (* Eval function from exp -> Answer *)
-let rec eval e = match e with
+let rec eval gamma  e = match e with
         true -> AnswerBool true
         | false -> AnswerBool false
-        | Not e1 -> AnswerBool (not ( match (eval e1) with
+        | Var v -> gamma v
+        | Not e1 -> AnswerBool (not ( match (eval gamma e1) with
                                         AnswerBool b -> b
                                         | _ -> raise NotABool ) )
-        | Or (e1, e2) -> AnswerBool((match (eval e1) with
+        | Or (e1, e2) -> AnswerBool((match (eval gamma e1) with
                                         AnswerBool b1 -> b1
                                         | _ -> raise NotABool
                                         )
-                                        ||(match (eval e2) with 
+                                        ||(match (eval gamma e2) with 
                                         AnswerBool b2 -> b2
                                         | _ -> raise NotABool
                                         ))
-        | And (e1, e2) -> AnswerBool((match (eval e1) with
+        | And (e1, e2) -> AnswerBool((match (eval gamma e1) with
                                         AnswerBool b1 -> b1
                                         | _ -> raise NotABool
                                         )
-                                        &&(match (eval e2) with 
+                                        &&(match (eval gamma e2) with 
                                         AnswerBool b2 -> b2
                                         | _ -> raise NotABool
                                         ))
         | Xor (e1, e2) -> AnswerBool(match 
-                                                ((match (eval e1) with
+                                                ((match (eval gamma e1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
                                                 ),
-                                                (match (eval e2) with 
+                                                (match (eval gamma e2) with 
                                                 AnswerBool b2 -> b2
                                                 | _ -> raise NotABool
                                                 ))
@@ -102,11 +108,11 @@ let rec eval e = match e with
                                                   | (false,false) -> false
                                                 )
         | Implies (e1, e2) -> AnswerBool(match 
-                                                ((match (eval e1) with
+                                                ((match (eval gamma e1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
                                                 ),
-                                                (match (eval e2) with 
+                                                (match (eval gamma e2) with 
                                                 AnswerBool b2 -> b2
                                                 | _ -> raise NotABool
                                                 ))
@@ -119,86 +125,86 @@ let rec eval e = match e with
                                                 )
         
         | Const n -> AnswerInt n
-        | Mod e1 -> ( let a = eval e1 in
+        | Mod e1 -> ( let a = eval gamma e1 in
                       let b = (match a with
                                 AnswerInt i -> i
                                 | _ -> raise NotAnInt )in
                         AnswerInt (if (b>=0) then b else (-1*b)) )
-        | Add (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Add (e1,e2) -> AnswerInt ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         +
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Sub (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Sub (e1,e2) -> AnswerInt ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         -
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Mul (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Mul (e1,e2) -> AnswerInt ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         *
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Div (e1,e2) -> AnswerInt ( (match (eval e1) with
+        | Div (e1,e2) -> AnswerInt ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         /
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Pow (e1,e2) -> AnswerInt ( int_of_float(float_of_int(match (eval e1) with
+        | Pow (e1,e2) -> AnswerInt ( int_of_float(float_of_int(match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt)
                                         **
-                                      float_of_int(match (eval e2) with
+                                      float_of_int(match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt) ) )
-        | Max (e1,e2) -> AnswerInt ( max (match (eval e1) with
+        | Max (e1,e2) -> AnswerInt ( max (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Min (e1,e2) -> AnswerInt ( min (match (eval e1) with
+        | Min (e1,e2) -> AnswerInt ( min (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Gt (e1,e2) -> AnswerBool ( (match (eval e1) with
+        | Gt (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         >
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Lt (e1,e2) -> AnswerBool ( (match (eval e1) with
+        | Lt (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         <
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Gte (e1,e2) -> AnswerBool ( (match (eval e1) with
+        | Gte (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         >=
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
-        | Lte (e1,e2) -> AnswerBool ( (match (eval e1) with
+        | Lte (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         <=
-                                      (match (eval e2) with
+                                      (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
         (* | _ -> raise ExpNotMatched *)
@@ -206,6 +212,7 @@ let rec eval e = match e with
 
 type opcode = TRUE 
             | FALSE 
+            | LOOKUP of variable
             | NOT 
             | OR 
             | AND
@@ -225,9 +232,12 @@ type opcode = TRUE
             | GTE
             | LTE
 
+exception OpcodeNotMatched
+
 let rec compile e = match e with
         true ->  [TRUE]
         | false -> [FALSE]
+        | Var v -> [LOOKUP(v)]
         | Not e1 -> (compile e1) @ [NOT]
         | Or (e1, e2) -> (compile e1) @ (compile e2) @ [OR]
         | And (e1, e2) -> (compile e1) @ (compile e2) @ [AND]
@@ -246,3 +256,8 @@ let rec compile e = match e with
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
+        (* | _ -> raise OpcodeNotMatched *)
+
+
+(* execute: stack * table * opcode list -> answer *)
+(* SHIT I DIDN'T take into account the variables *)
