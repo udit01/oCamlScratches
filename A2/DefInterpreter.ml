@@ -27,18 +27,20 @@ execute: stack * table * opcode list -> answer
 Provide enough examples  
 *)
 
-type expBool = T | F 
-        | Not of expBool
-        | Or of expBool*expBool
-        | And of expBool*expBool
-        | Implies of expBool*expBool
+(* type expBool =  *)
 
-type exp = Const of int 
+type exp = 
+        T | F 
+        | Not of exp
+        | Or of exp*exp
+        | And of exp*exp
+        | Implies of exp*exp
+        | Const of int 
+        | Mod of exp
         | Plus of exp*exp       
         | Subt of exp*exp       
         | Mult of exp*exp       
         | Div of exp*exp       
-        | Mod of exp
         | Pow of exp*exp
         | Max of exp*exp
         | Min of exp*exp
@@ -50,3 +52,28 @@ type exp = Const of int
 (* How to define nth tuples ? *)
 (* then the projection fuction ? *)
 (* Also introduce Vars of string ? *)
+
+type ans = AnswerInt of int | AnswerBool of bool
+
+exception NotABool
+exception NotAnInt
+exception ExpNotMatched
+(* first define only for expInt then generalize  *)
+(* Eval function from exp -> Answer *)
+let rec eval e = match e with
+        Const n -> AnswerInt n
+        | Mod e1 -> ( let a = eval e1 in
+                      let b = (match a with
+                                AnswerInt i -> i
+                                | _ -> raise NotAnInt )in
+                        AnswerInt (if (b>=0) then b else (-1*b)) )
+        | Plus (e1,e2) -> (let a1 = eval e1 in
+                          let a2 = eval e2 in 
+                          let ans = (match a1 with 
+                                AnswerInt i1 -> (match a2 with 
+                                                        AnswerInt i2 -> (i1+i2)
+                                                       | _ -> raise NotAnInt)
+                                |_ -> raise NotAnInt) in
+                           AnswerInt ans)
+
+        | _ -> raise ExpNotMatched
