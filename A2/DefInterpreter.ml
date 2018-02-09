@@ -12,7 +12,7 @@ The expressions in the language are of the following forms
     binary operations: + (addition), - (subtraction), * (Multiplication), div, mod, ^ (exponentiation)
     Boolean constants: T and F
     Unary boolean operation: not
-    binary boolean operations:  /\ (and), \/ (or), -> (implies)
+    binary boolean operations:  /\ (and), \/ (or), -> (Impl)
     Comparison operators: = (equal) , > (greater than), < (less than) , >= (greater or equal), <= (less or equal) on integer expressions
     n-tuples for each n > 2
     Projection operators proj(i,n) which project the ith element of an n-tuple.
@@ -38,7 +38,7 @@ type exp =
         | Or of exp*exp
         | And of exp*exp
         | Xor of exp*exp
-        | Implies of exp*exp
+        | Impl of exp*exp
         | Const of int 
         | Mod of exp
         | Add of exp*exp       
@@ -107,7 +107,7 @@ let rec eval gamma  e = match e with
                                                   | (false,true)  -> true
                                                   | (false,false) -> false
                                                 )
-        | Implies (e1, e2) -> AnswerBool(match 
+        | Impl (e1, e2) -> AnswerBool(match 
                                                 ((match (eval gamma e1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
@@ -217,7 +217,7 @@ type opcode = TRUE
             | OR 
             | AND
             | XOR
-            | IMPLIES
+            | IMPL
             | CONST of int
             | MOD
             | ADD
@@ -242,7 +242,7 @@ let rec compile e = match e with
         | Or (e1, e2) -> (compile e1) @ (compile e2) @ [OR]
         | And (e1, e2) -> (compile e1) @ (compile e2) @ [AND]
         | Xor (e1, e2) -> (compile e1) @ (compile e2) @ [XOR]
-        | Implies (e1, e2) ->  (compile e1) @ (compile e2) @ [IMPLIES]
+        | Impl (e1, e2) ->  (compile e1) @ (compile e2) @ [IMPL]
         | Const n -> [CONST n]
         | Mod e1 -> (compile e1) @ [MOD]
         | Add (e1,e2) -> (compile e1) @ (compile e2) @ [ADD]
@@ -260,4 +260,143 @@ let rec compile e = match e with
 
 
 (* execute: stack * table * opcode list -> answer *)
-(* SHIT I DIDN'T take into account the variables *)
+exception RuntimeError
+let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
+        (a::s , g, []) -> a
+        |(s , g, TRUE::o ) -> execute ( (AnswerBool true )::(s) , g , o  )
+        | (s , g, FALSE::o ) -> execute ( (AnswerBool false )::(s) , g , o  )
+        | (s, g , LOOKUP(v)::o) -> execute ( ( g v  )::(s) , g , o  )
+        | (a::s, g, NOT::o ) -> execute ( AnswerBool(match a with 
+                                                AnswerBool b -> b
+                                                | _ -> raise NotABool)::s , g, o )
+        | (a1::a2::s , g, OR::o ) -> execute (AnswerBool((match (a1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                )
+                                                ||(match (a2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))::s , g, o )
+        | (a1::a2::s , g, AND::o ) -> execute (AnswerBool((match (a1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                )
+                                                &&(match (a2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))::s , g, o )
+        | (a1::a2::s , g, XOR::o ) -> execute (AnswerBool(match 
+                                                ((match (a1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                ),
+                                                (match (a2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))
+
+                                                with 
+                                                  (true,true)   -> false
+                                                  | (true,false)  -> true
+                                                  | (false,true)  -> true
+                                                  | (false,false) -> false
+                                                )::s, g , o)
+        | (a1::a2::s , g, IMPL::o )  -> execute ( AnswerBool(match 
+                                                ((match (a1) with
+                                                AnswerBool b1 -> b1
+                                                | _ -> raise NotABool
+                                                ),
+                                                (match (a2) with 
+                                                AnswerBool b2 -> b2
+                                                | _ -> raise NotABool
+                                                ))
+                                                with 
+                                                  (true,true)   -> true
+                                                  | (true,false)  -> false
+                                                  | (false,true)  -> true
+                                                  | (false,false) -> true
+                                                )::s , g, o)
+        
+        | ( s, g, CONST(n)::o )-> execute( (AnswerInt n)::s, g, o)
+        | ( a1::s, g, MOD::o ) -> (let b = (match (a1) with
+                                                AnswerInt i -> i
+                                                | _ -> raise NotAnInt )in
+                                execute ( AnswerInt (if (b>=0) then b else (-1*b))::s , g, o ) )
+        | (a1::a2::s, g, ADD::o) -> execute (AnswerInt ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        +
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt))::s, g, o )
+        | (a1::a2::s, g, SUB::o) -> execute (AnswerInt ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        -
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt))::s, g, o)
+        | (a1::a2::s, g, MUL::o) ->execute (AnswerInt ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        *
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt))::s, g, o )
+        |  (a1::a2::s, g, DIV::o) ->execute (AnswerInt ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        /
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt))::s, g, o )
+        | (a1::a2::s, g, POW::o)  ->execute ( AnswerInt ( int_of_float(float_of_int(match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt)
+                                        **
+                                      float_of_int(match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt) ))::s , g, o )
+        | (a1::a2::s, g, MAX::o) -> execute ( AnswerInt ( max (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o)
+        | (a1::a2::s, g, MIN::o) -> execute ( AnswerInt ( min (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o)
+        | (a1::a2::s, g, GT::o) -> execute ( AnswerBool ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        >
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o )
+        | (a1::a2::s, g, LT::o) -> execute( AnswerBool ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        <
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o)
+        | (a1::a2::s, g, GTE::o)-> execute( AnswerBool ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        >=
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o)
+        | (a1::a2::s, g, LTE::o)-> execute( AnswerBool ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        <=
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o)
+        | _ -> raise RuntimeError
