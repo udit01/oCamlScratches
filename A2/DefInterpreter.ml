@@ -29,7 +29,7 @@ Provide enough examples
 
 (* type expBool =  *)
 
-type variable = B of bool | I of int 
+type variable = B of bool | I of int | S of string
 
 type exp = 
         true | false 
@@ -238,13 +238,13 @@ let rec compile e = match e with
         true ->  [TRUE]
         | false -> [FALSE]
         | Var v -> [LOOKUP(v)]
-        | Not e1 -> (compile e1) @ [NOT]
+        | Not (e1) -> (compile e1) @ [NOT]
         | Or (e1, e2) -> (compile e1) @ (compile e2) @ [OR]
         | And (e1, e2) -> (compile e1) @ (compile e2) @ [AND]
         | Xor (e1, e2) -> (compile e1) @ (compile e2) @ [XOR]
         | Impl (e1, e2) ->  (compile e1) @ (compile e2) @ [IMPL]
-        | Const n -> [CONST n]
-        | Mod e1 -> (compile e1) @ [MOD]
+        | Const (n) -> [CONST (n)]
+        | Mod (e1) -> (compile e1) @ [MOD]
         | Add (e1,e2) -> (compile e1) @ (compile e2) @ [ADD]
         | Sub (e1,e2) -> (compile e1) @ (compile e2) @ [SUB]
         | Mul (e1,e2) -> (compile e1) @ (compile e2) @ [MUL]
@@ -266,9 +266,9 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
         |(s , g, TRUE::o ) -> execute ( (AnswerBool true )::(s) , g , o  )
         | (s , g, FALSE::o ) -> execute ( (AnswerBool false )::(s) , g , o  )
         | (s, g , LOOKUP(v)::o) -> execute ( ( g v  )::(s) , g , o  )
-        | (a::s, g, NOT::o ) -> execute ( AnswerBool(match a with 
+        | (a::s, g, NOT::o ) -> execute ( AnswerBool (not (match a with 
                                                 AnswerBool b -> b
-                                                | _ -> raise NotABool)::s , g, o )
+                                                | _ -> raise NotABool))::s , g, o  )
         | (a1::a2::s , g, OR::o ) -> execute (AnswerBool((match (a1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
