@@ -261,6 +261,8 @@ let rec compile e = match e with
 
 (* execute: stack * table * opcode list -> answer *)
 exception RuntimeError
+(* NOTE: Remember that while pushing in stack, first operand goes inside
+So the order of execution is reversed *)
 let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
         (a::s , g, []) -> a
         |(s , g, TRUE::o ) -> execute ( (AnswerBool true )::(s) , g , o  )
@@ -269,7 +271,7 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
         | (a::s, g, NOT::o ) -> execute ( AnswerBool (not (match a with 
                                                 AnswerBool b -> b
                                                 | _ -> raise NotABool))::s , g, o  )
-        | (a1::a2::s , g, OR::o ) -> execute (AnswerBool((match (a1) with
+        | (a2::a1::s , g, OR::o ) -> execute (AnswerBool((match (a1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
                                                 )
@@ -277,7 +279,7 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                                 AnswerBool b2 -> b2
                                                 | _ -> raise NotABool
                                                 ))::s , g, o )
-        | (a1::a2::s , g, AND::o ) -> execute (AnswerBool((match (a1) with
+        | (a2::a1::s , g, AND::o ) -> execute (AnswerBool((match (a1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
                                                 )
@@ -285,7 +287,7 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                                 AnswerBool b2 -> b2
                                                 | _ -> raise NotABool
                                                 ))::s , g, o )
-        | (a1::a2::s , g, XOR::o ) -> execute (AnswerBool(match 
+        | (a2::a1::s , g, XOR::o ) -> execute (AnswerBool(match 
                                                 ((match (a1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
@@ -301,7 +303,7 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                                   | (false,true)  -> true
                                                   | (false,false) -> false
                                                 )::s, g , o)
-        | (a1::a2::s , g, IMPL::o )  -> execute ( AnswerBool(match 
+        | (a2::a1::s , g, IMPL::o )  -> execute ( AnswerBool(match 
                                                 ((match (a1) with
                                                 AnswerBool b1 -> b1
                                                 | _ -> raise NotABool
@@ -322,77 +324,77 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                                 AnswerInt i -> i
                                                 | _ -> raise NotAnInt )in
                                 execute ( AnswerInt (if (b>=0) then b else (-1*b))::s , g, o ) )
-        | (a1::a2::s, g, ADD::o) -> execute (AnswerInt ( (match (a1) with
+        | (a2::a1::s, g, ADD::o) -> execute (AnswerInt ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         +
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt))::s, g, o )
-        | (a1::a2::s, g, SUB::o) -> execute (AnswerInt ( (match (a1) with
+        | (a2::a1::s, g, SUB::o) -> execute (AnswerInt ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         -
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt))::s, g, o)
-        | (a1::a2::s, g, MUL::o) ->execute (AnswerInt ( (match (a1) with
+        | (a2::a1::s, g, MUL::o) ->execute (AnswerInt ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         *
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt))::s, g, o )
-        |  (a1::a2::s, g, DIV::o) ->execute (AnswerInt ( (match (a1) with
+        |  (a2::a1::s, g, DIV::o) ->execute (AnswerInt ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         /
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt))::s, g, o )
-        | (a1::a2::s, g, POW::o)  ->execute ( AnswerInt ( int_of_float(float_of_int(match (a1) with
+        | (a2::a1::s, g, POW::o)  ->execute ( AnswerInt ( int_of_float(float_of_int(match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt)
                                         **
                                       float_of_int(match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt) ))::s , g, o )
-        | (a1::a2::s, g, MAX::o) -> execute ( AnswerInt ( max (match (a1) with
+        | (a2::a1::s, g, MAX::o) -> execute ( AnswerInt ( max (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
-        | (a1::a2::s, g, MIN::o) -> execute ( AnswerInt ( min (match (a1) with
+        | (a2::a1::s, g, MIN::o) -> execute ( AnswerInt ( min (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
-        | (a1::a2::s, g, GT::o) -> execute ( AnswerBool ( (match (a1) with
+        | (a2::a1::s, g, GT::o) -> execute ( AnswerBool ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         >
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o )
-        | (a1::a2::s, g, LT::o) -> execute( AnswerBool ( (match (a1) with
+        | (a2::a1::s, g, LT::o) -> execute( AnswerBool ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         <
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
-        | (a1::a2::s, g, GTE::o)-> execute( AnswerBool ( (match (a1) with
+        | (a2::a1::s, g, GTE::o)-> execute( AnswerBool ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         >=
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
-        | (a1::a2::s, g, LTE::o)-> execute( AnswerBool ( (match (a1) with
+        | (a2::a1::s, g, LTE::o)-> execute( AnswerBool ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
                                         <=
