@@ -41,3 +41,5 @@ a1=a2;;
 compile (Const(2));;
 compile (Const(-2));;
 compile ( Mod(Const(-2)));;
+
+(* Check for varialbes *)
