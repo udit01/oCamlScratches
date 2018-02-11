@@ -52,6 +52,8 @@ type exp =
         | Lt of exp*exp
         | Gte of exp*exp
         | Lte of exp*exp
+        | Tuple of exp list
+        | Proj of int * (exp list)
 
         (* can add logical (bitwise) and or xor etc ? *)
 
@@ -59,7 +61,7 @@ type exp =
 (* then the projection fuction ? *)
 (* Also introduce Vars of variable ? *)
 
-type ans = AnswerInt of int | AnswerBool of bool
+type ans = AnswerInt of int | AnswerBool of bool | AnswerTuple of ans list
 
 (* let g1 =  *)
 
@@ -207,6 +209,8 @@ let rec eval gamma  e = match e with
                                       (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
+        | Tuple l -> AnswerTuple (List.map (eval gamma) l)
+        | Proj (i,l) -> eval gamma (List.nth  l i)
         (* | _ -> raise ExpNotMatched *)
 
 
@@ -231,6 +235,9 @@ type opcode = TRUE
             | LT
             | GTE
             | LTE
+            | TUPLE
+            | PROJ of int
+            | T of opcode list
 
 exception OpcodeNotMatched
 
@@ -256,8 +263,11 @@ let rec compile e = match e with
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
+        | Tuple l -> (T (List.map compile l)) @ [TUPLE]
+        (* | Proj (i,l) -> (List.map compile l) @ [PROJ(i)] *)
+        | Proj (i,l) -> (compile(List.nth l i)) 
         (* | _ -> raise OpcodeNotMatched *)
-
+(* Two ways to do projection, either don't even compile others or you can reject it at execution *)
 
 (* execute: stack * table * opcode list -> answer *)
 exception RuntimeError
