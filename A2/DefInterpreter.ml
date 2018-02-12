@@ -2,7 +2,7 @@
 Author -> Udit Jain
 Entry Number -> 2016CS10327 
  *)
-(*
+(*PROBLEM STATEMENT 
 In this assignment, you will define the abstract syntax (data type exp) and a definitional interpreter eval for a simple arithmetic and boolean calculation language.
 The expressions in the language are of the following forms
 
@@ -27,8 +27,6 @@ execute: stack * table * opcode list -> answer
 Provide enough examples  
 *)
 
-(* type expBool =  *)
-
 type variable = B of bool | I of int | S of string
 
 type exp = 
@@ -48,6 +46,7 @@ type exp =
         | Pow of exp*exp
         | Max of exp*exp
         | Min of exp*exp
+        | EqI of exp*exp
         | Gt of exp*exp
         | Lt of exp*exp
         | Gte of exp*exp
@@ -55,22 +54,13 @@ type exp =
         | Tuple of (exp list)
         | Proj of int * (exp)
 
-        (* can add logical (bitwise) and or xor etc ? *)
-
-(* How to define nth tuples ? *)
-(* then the projection fuction ? *)
-(* Also introduce Vars of variable ? *)
-
 type ans = AnswerInt of int | AnswerBool of bool | AnswerTuple of ans list
-
-(* let g1 =  *)
 
 exception NotABool
 exception NotAnInt
 exception NotATuple
 exception ExpNotMatched
-(* first define only for expInt then generalize  *)
-(* Eval function from exp -> Answer *)
+(* Eval function from exp-> (table) -> Answer *)
 let rec eval gamma  e = match e with
         true -> AnswerBool true
         | false -> AnswerBool false
@@ -182,6 +172,13 @@ let rec eval gamma  e = match e with
                                       (match (eval gamma e2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
+        | EqI (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        =
+                                      (match (eval gamma e2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )
         | Gt (e1,e2) -> AnswerBool ( (match (eval gamma e1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
@@ -213,7 +210,7 @@ let rec eval gamma  e = match e with
         | Tuple l -> AnswerTuple (List.map (eval gamma) l)
         | Proj (i,Tuple l) -> eval gamma (List.nth  l i)
         | Proj (i, _) -> raise NotATuple
-        | _ -> raise ExpNotMatched
+        (* | _ -> raise ExpNotMatched *)
 
 
 type opcode = TRUE 
@@ -233,6 +230,7 @@ type opcode = TRUE
             | POW
             | MAX
             | MIN
+            | EQI
             | GT
             | LT
             | GTE
@@ -261,6 +259,7 @@ let rec compile e = match e with
         | Pow (e1,e2) ->  (compile e1) @ (compile e2) @ [POW]
         | Max (e1,e2) ->  (compile e1) @ (compile e2) @ [MAX]
         | Min (e1,e2) ->  (compile e1) @ (compile e2) @ [MIN]
+        | EqI (e1,e2) -> (compile e1) @ (compile e2) @ [EQI]
         | Gt (e1,e2) -> (compile e1) @ (compile e2) @ [GT]
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
@@ -272,11 +271,11 @@ let rec compile e = match e with
         (* | _ -> raise OpcodeNotMatched *)
 (* Two ways to do projection, either don't even compile others or you can reject it at execution *)
 
-(* execute: stack * table * opcode list -> answer *)
 exception RuntimeError
 let executeCurry execute stack gamma opcodelist = execute (stack,gamma,opcodelist)
 (* NOTE: Remember that while pushing in stack, first operand goes inside
 So the order of execution is reversed *)
+(* execute: stack * table * opcode list -> answer *)
 let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
         (a::s , g, []) -> a
         |(s , g, TRUE::o ) -> execute ( (AnswerBool true )::(s) , g , o  )
@@ -387,6 +386,13 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
+        | (a2::a1::s, g, EQI::o) -> execute ( AnswerBool ( (match (a1) with
+                                        AnswerInt n1 -> n1
+                                        | _ -> raise NotAnInt) 
+                                        =
+                                      (match (a2) with
+                                        AnswerInt n2 -> n2
+                                        | _ -> raise NotAnInt)  )::s, g, o )
         | (a2::a1::s, g, GT::o) -> execute ( AnswerBool ( (match (a1) with
                                         AnswerInt n1 -> n1
                                         | _ -> raise NotAnInt) 
@@ -416,5 +422,5 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
         | (s, g, TUP(oll)::TUPLE::o ) -> execute( (AnswerTuple ( List.map (executeCurry execute [] g) oll))::s ,g , o )
-        | (a::s, g, TUP(oll)::PROJ(i)::o) -> execute ( (execute( [] ,g , (List.nth oll i)))::s , g, o)
+        | (s, g, TUP(oll)::PROJ(i)::o) -> execute ( [(execute( [] ,g , (List.nth oll i)))]@s , g, o)
         | _ -> raise RuntimeError
