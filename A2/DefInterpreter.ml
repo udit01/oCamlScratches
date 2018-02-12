@@ -52,8 +52,8 @@ type exp =
         | Lt of exp*exp
         | Gte of exp*exp
         | Lte of exp*exp
-        | Tuple of exp list
-        | Proj of int * (exp list)
+        | Tuple of (exp list)
+        | Proj of int * (exp)
 
         (* can add logical (bitwise) and or xor etc ? *)
 
@@ -67,6 +67,7 @@ type ans = AnswerInt of int | AnswerBool of bool | AnswerTuple of ans list
 
 exception NotABool
 exception NotAnInt
+exception NotATuple
 exception ExpNotMatched
 (* first define only for expInt then generalize  *)
 (* Eval function from exp -> Answer *)
@@ -210,8 +211,9 @@ let rec eval gamma  e = match e with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )
         | Tuple l -> AnswerTuple (List.map (eval gamma) l)
-        | Proj (i,l) -> eval gamma (List.nth  l i)
-        (* | _ -> raise ExpNotMatched *)
+        | Proj (i,Tuple l) -> eval gamma (List.nth  l i)
+        | Proj (i, _) -> raise NotATuple
+        | _ -> raise ExpNotMatched
 
 
 type opcode = TRUE 
@@ -237,7 +239,7 @@ type opcode = TRUE
             | LTE
             | TUPLE
             | PROJ of int
-            | T of opcode list
+            | TUP of ((opcode list) list)
 
 exception OpcodeNotMatched
 
@@ -263,14 +265,16 @@ let rec compile e = match e with
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
-        | Tuple l -> (T (List.map compile l)) @ [TUPLE]
-        (* | Proj (i,l) -> (List.map compile l) @ [PROJ(i)] *)
-        | Proj (i,l) -> (compile(List.nth l i)) 
+        | Tuple l -> [TUP (List.map compile l)] @ [TUPLE]
+        | Proj (i,Tuple l) -> [TUP(List.map compile l)] @ [PROJ(i)]
+        | Proj (i,_) -> raise NotATuple
+        (* | Proj (i,l) -> (compile(List.nth l i))  *)
         (* | _ -> raise OpcodeNotMatched *)
 (* Two ways to do projection, either don't even compile others or you can reject it at execution *)
 
 (* execute: stack * table * opcode list -> answer *)
 exception RuntimeError
+let executeCurry execute stack gamma opcodelist = execute (stack,gamma,opcodelist)
 (* NOTE: Remember that while pushing in stack, first operand goes inside
 So the order of execution is reversed *)
 let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
@@ -411,4 +415,6 @@ let rec execute (stack, gamma, opcodes) = match (stack, gamma, opcodes) with
                                       (match (a2) with
                                         AnswerInt n2 -> n2
                                         | _ -> raise NotAnInt)  )::s, g, o)
+        | (s, g, TUP(oll)::TUPLE::o ) -> execute( (AnswerTuple ( List.map (executeCurry execute [] g) oll))::s ,g , o )
+        | (a::s, g, TUP(oll)::PROJ(i)::o) -> execute ( (execute( [] ,g , (List.nth oll i)))::s , g, o)
         | _ -> raise RuntimeError

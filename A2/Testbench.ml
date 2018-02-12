@@ -10,9 +10,10 @@ let g v = match v with
 
 let e1 = (Gt( Mod(Const(-3) ) , Const(2) ));;
 let e2 = (Gt( Mod(Const(-3) ) , Const(3) ));;
+let e3 = Tuple ([e1;e2])
+let e4 = Proj(1, e3 );;
 
-
-l = [e1;e2]
+let l = [e1;e2;e3;e4];;
 
 let rec checker i l = match l with
         [] -> ()
