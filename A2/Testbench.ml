@@ -69,7 +69,7 @@ let rec checker i (l , gtr) = match (l,gtr) with
         | (x::xs,y::ys) -> ((if((execute ([],gamma,(compile x))) <> y ) then (Printf.printf "Execute(compile) =/= ground Truth for: %d\n " i) 
                         else if ((eval gamma x) <> y ) then (Printf.printf "Eval =/= ground Truth for %d\n " i)
                         else (Printf.printf "Success for: %d\n" i ) ) ; checker (i+1) (xs,ys) )
-        (* | _ ->    (Printf.printf "Error in positioning of lables and input data : %d\n" i )             *)
+        | _ ->    (Printf.printf "Error in positioning of lables and input data : %d\n" i )  ;;          
 
 
 checker 0 (l,gt);;
