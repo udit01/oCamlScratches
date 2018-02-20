@@ -14,7 +14,6 @@ type term = V of variable | Node of symbol*(term list)
     |S "-" -> 2
     | _ -> -1 *)
 
-let s = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ]
 (* Check signature can check for both functions and symbol lists *)
 (* IDK how the one in form of functions would work but for the list, its okay, *)
     (* MY checker doesn't allow repeated symbols *)
@@ -28,8 +27,6 @@ let check_sig si =
                                                             Pair (S str,i) -> if ((i>=0)) then (chk tl (hd::l)) else ((false,l))
                                                                 ) )  in
     chk si [] ;;
-
-check_sig s;;
 
 exception BadSignature
 exception SymbolNotFound
@@ -131,30 +128,52 @@ let substl v2tl term =
     subs v2tl term
 
 
-
+exception MalformedList
 exception NOT_UNIFIABLE
 
 let mostGenUnif signature (t,u) = 
     (* Do we do tail recursion below ? *)
     (* how equivalance in exchanging t and u ? *)
-    let rec mgu sig (t,u) = match (t,u) with
+    let rec mgu signat (t,u) = match (t,u) with
         (* (V v, V v) -> [] *)
          (V v1, V v2) -> (if (v1=v2) then([]) 
-                            else ([(V v,V y)]))
-        (* What about Node, Var case ?                     *)
-        | (V v, Node (sym,l)) -> (if ((get_arity sign sym)=0) then ([(V v,Node(sym,l))] ) 
+                            else ([(V v1,V v2)]))
+        (* What about Node, Var case ?  *)
+        | (V v, Node (sym,l)) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
+                                    else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
+                                            else ([V v,Node(sym,l)]) ) )
+        | (Node (sym,l), V v) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
                                     else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
                                             else ([V v,Node(sym,l)]) ) )
         | (Node(sym1,l1),Node(sym2,l2)) -> (if(sym1 <> sym2) then (raise NOT_UNIFIABLE)
                                             else  ( let rec iter s (l1,l2) = match (l1,l2) with
                                                             ([],[]) -> s
-                                                            | (h1::t1,h2::t2) ->   )
+                                                            | (h1::t1,h2::t2) -> iter (mgu signat ((substl s h1),(substl s h2)) )  (t1,t2)
+                                                            | _ -> raise MalformedList
+                                                        in
+                                                    (iter [] (l1,l2)) ) )
     in
     mgu signature (t,u)
 
 
+let v2tl1 = [(V (Var "a") , V (Var "map a"))]
+let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)]
 
 let t1 = V (Var "a");;
 let t2 = Node ( S "||" ,[t1]);;
 let t3 = Node (S "#",[t2;t2;t1;t1]);;
-let t4 = subst variable2term t3;;
+let t4 = substl v2tl1 t3;;
+
+let l1 = [t1;t2;t3;t4];;
+
+check_sig sig1;;
+
+let u x = ()
+let rec checker signat i l = match l with
+        [] -> (Printf.printf "Checking done for %d values.\n" i ) 
+        | hd::tl -> ( if((wfterm signat  hd) = true ) then (Printf.printf "Well formed term for : %d.\n" i) ;
+                      u (ht hd);u (size hd);u ( vars hd);u (substl v2tl1 hd );u (mostGenUnif signat (hd,hd)) ;(Printf.printf "Success for: %d\n" i ) ; checker signat (i+1) tl  )
+        (* | _ ->    (Printf.printf "Error in positioning of lables and input data : %d\n" i )  ;;           *)
+;;
+
+checker sig1 0 l1;;
