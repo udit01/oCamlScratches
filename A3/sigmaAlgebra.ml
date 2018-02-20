@@ -33,7 +33,7 @@ check_sig s;;
 
 exception BadSignature
 exception SymbolNotFound
-
+(* Returns the arity of that particular symbol from the signature *)
 let  get_arity signat sym = 
     let rec getArr signat sym = match signat with
             [] -> raise SymbolNotFound
@@ -77,6 +77,8 @@ let size term =
     in
     siz 0 term
 
+
+(* vars will return the list of variables in the term *)
 let cmp a b = 0 
 let vars term = 
     let rec vrs vl t = (match t with 
@@ -88,22 +90,68 @@ let vars term =
 (* Which is faster, sort_uniq inside recursive vrs or outside as now ? *)
 (* I can also return count of every variables, or retrun them sorted by duplicity *)
 
-(* What does he meain by finding a suitable represntation ? *)
-let variable2term vr = match vr with
+(* What does he mean by finding a suitable represntation ? *)
+(* let variable2term vr = match vr with
           Var "a" -> Node ( S "0" , [])
-       | _  ->V ( Var "unknown");;
+       | _  ->V ( Var "unknown");; *)
 
 
 (* ENSURE SUBST IS EFFICIENTLY IMPLEMENTED *)
-let subst v2t term = 
+(* v2t is a function that maps variable to term *)
+(* or could it be better if it's a list ? *)
+(* let substf v2t term = 
     let rec subs v2t t = (match t with 
         (V v)-> (v2t v)
         | Node (sym,l) -> Node( sym ,( map (subs v2t) l ))
         )
     in
-    subs v2t term
+    subs v2t term *)
+
+exception SubstitutionNotFound
+exception BadSubst
+(* find subs returns the corresponding term from the list of term -> term substitutions *)
+let findSubs v2tlist v = 
+    let rec fs v2tlist v = match v2tlist with
+            [] -> (V v) 
+            (* ^ return the same (term of) variable if not found *)
+            | hd::tl -> (match hd with 
+                            (V var, t) -> (if (var = v) then (t) else (fs tl v))
+                            | _ -> raise BadSubst
+                        )
+             in
+    fs v2tlist v
+
+(* term to substituted term *)
+let substl v2tl term = 
+    let rec subs v2tl t = (match t with 
+        (V v)-> (findSubs v2tl v)
+        | Node (sym,l) -> Node( sym ,( map (subs v2tl) l ))
+        )
+    in
+    subs v2tl term
+
+
 
 exception NOT_UNIFIABLE
+
+let mostGenUnif signature (t,u) = 
+    (* Do we do tail recursion below ? *)
+    (* how equivalance in exchanging t and u ? *)
+    let rec mgu sig (t,u) = match (t,u) with
+        (* (V v, V v) -> [] *)
+         (V v1, V v2) -> (if (v1=v2) then([]) 
+                            else ([(V v,V y)]))
+        (* What about Node, Var case ?                     *)
+        | (V v, Node (sym,l)) -> (if ((get_arity sign sym)=0) then ([(V v,Node(sym,l))] ) 
+                                    else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
+                                            else ([V v,Node(sym,l)]) ) )
+        | (Node(sym1,l1),Node(sym2,l2)) -> (if(sym1 <> sym2) then (raise NOT_UNIFIABLE)
+                                            else  ( let rec iter s (l1,l2) = match (l1,l2) with
+                                                            ([],[]) -> s
+                                                            | (h1::t1,h2::t2) ->   )
+    in
+    mgu signature (t,u)
+
 
 
 let t1 = V (Var "a");;
