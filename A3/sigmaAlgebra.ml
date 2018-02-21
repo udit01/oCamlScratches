@@ -7,7 +7,7 @@ type variable = Var of string
 type sym = Pair of symbol*int 
 type signat = sym list
 
-type term = V of variable | Node of symbol*(term list)
+type term = V of variable | Node of symbol*(term list) | None
 
 (* let signatr str = match str with
     S "+" -> 2 
@@ -76,7 +76,14 @@ let size term =
 
 
 (* vars will return the list of variables in the term *)
-let cmp a b = 0 
+(* THE BELOW CMP function was eradication all variables except the last 1  *)
+(* let cmp a b = 0 *)
+(* let cmp a b = match (a,b) with
+    (V v,V v) -> 0
+    | (V v1, V v2) -> 1 *)
+
+let cmp a b = if (a=b) then (0) else (1);;
+
 let vars term = 
     let rec vrs vl t = (match t with 
         (V v)-> v::vl
@@ -130,30 +137,46 @@ let substl v2tl term =
 
 exception MalformedList
 exception NOT_UNIFIABLE
+exception InvalidComposition
+exception NOT_COMPOSABLE
 
-let mostGenUnif signature (t,u) = 
+let rec findMatch vt sbl = match sbl with
+        [] -> None
+        | (v,s)::tl -> (if (v=vt) then (s) else (findMatch vt tl) )  
+
+(* ORDER MATTERS *)
+(* implemented below of s1 O s2 ie s1(s2(term))  or s2s1*)
+let rec compos s2 s1 = match s1 with
+        [] -> s2
+        | (V var , t )::tl -> (let m = findMatch (V var) s2  in
+                                if(m = None) then (compos (s2@[(V var,t)]) tl )
+                                else if (m = t) then (compos (s2) tl )
+                                else (raise NOT_COMPOSABLE) )
+        | _ -> raise InvalidComposition                        
+
+(* let mostGenUnif signature (t,u) =  *)
     (* Do we do tail recursion below ? *)
     (* how equivalance in exchanging t and u ? *)
-    let rec mgu signat (t,u) = match (t,u) with
-        (* (V v, V v) -> [] *)
-         (V v1, V v2) -> (if (v1=v2) then([]) 
-                            else ([(V v1,V v2)]))
-        (* What about Node, Var case ?  *)
-        | (V v, Node (sym,l)) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
-                                    else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
-                                            else ([V v,Node(sym,l)]) ) )
-        | (Node (sym,l), V v) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
-                                    else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
-                                            else ([V v,Node(sym,l)]) ) )
-        | (Node(sym1,l1),Node(sym2,l2)) -> (if(sym1 <> sym2) then (raise NOT_UNIFIABLE)
-                                            else  ( let rec iter s (l1,l2) = match (l1,l2) with
-                                                            ([],[]) -> s
-                                                            | (h1::t1,h2::t2) -> iter (mgu signat ((substl s h1),(substl s h2)) )  (t1,t2)
-                                                            | _ -> raise MalformedList
-                                                        in
-                                                    (iter [] (l1,l2)) ) )
-    in
-    mgu signature (t,u)
+let rec mgu signat (t,u) = match (t,u) with
+    (* (V v, V v) -> [] *)
+    (V v1, V v2) -> (if (v1=v2) then([]) 
+                        else ([(V v1,V v2)]))
+    (* What about Node, Var case ?  *)
+    | (V v, Node (sym,l)) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
+                                else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
+                                        else ([V v,Node(sym,l)]) ) )
+    | (Node (sym,l), V v) -> (if ((get_arity signat sym)=0) then ([(V v,Node(sym,l))] ) 
+                                else ( if(mem v (vars (Node(sym,l)) ) ) then (raise NOT_UNIFIABLE)
+                                        else ([V v,Node(sym,l)]) ) )
+    | (Node(sym1,l1),Node(sym2,l2)) -> (if(sym1 <> sym2) then (raise NOT_UNIFIABLE)
+                                        else  ( let rec iter s (l1,l2) = match (l1,l2) with
+                                                        ([],[]) -> s
+                                                        | (h1::t1,h2::t2) -> iter (compos s  (mgu signat ((substl s h1),(substl s h2)) )  )   (t1,t2)
+                                                        | _ -> raise MalformedList
+                                                    in
+                                                (iter [] (l1,l2)) ) )
+    (* in
+    mgu signature (t,u) *)
 
 
 (* include that in the quiz ? *)
@@ -165,15 +188,19 @@ let t3 = Node (S "#",[t2;t2;t1;t0]);;
 
 
 (* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
-let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)]
+let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ) ]
 
 (* let v2tl1 = [(V (Var "a") , V (Var "map a")) ; (V (Var "x") , V (Var "map x"))] *)
 let v2tl1 = [(V (Var "a") , t0) ]
 
 let t4 = substl v2tl1 t3;;
+let t5 = V (Var "b");;
+let t6 = Node (S "@" , [t5;t1]);;
 
-let l1 = [t0;t1;t2;t3;t4];;
-
+let l1 = [t0;t1;t2;t3;t4;t5;t6];;
+let ter1 = Node(S "+" , [t1;t5]);;
+let ter2 = Node(S "+" , [t5;t1] );;
+let ter3 = Node(S "-" , [t5;t1] );;
 
 check_sig sig1;;
 
@@ -181,8 +208,15 @@ let u x = ()
 let rec checker signat i l = match l with
         [] -> (Printf.printf "Checking done for %d values.\n" i ) 
         | hd::tl -> ( if((wfterm signat  hd) = true ) then (Printf.printf "Well formed term for : %d.\n" i) ;
-                      u (ht hd);u (size hd);u ( vars hd);u (substl v2tl1 hd );u (mostGenUnif signat (hd,hd)) ;(Printf.printf "Success for: %d\n" i ) ; checker signat (i+1) tl  )
+                      u (ht hd);u (size hd);u ( vars hd);u (substl v2tl1 hd );u (mgu signat (hd,hd)) ;(Printf.printf "Success for: %d\n" i ) ; checker signat (i+1) tl  )
         (* | _ ->    (Printf.printf "Error in positioning of lables and input data : %d\n" i )  ;;           *)
 ;;
 
 checker sig1 0 l1;;
+
+(* Erraneous cases:- *)
+
+ (* should be non unifiable  *)
+ mgu sig1 (t6,t1);;
+ (* should be unifiable  *)
+ mgu sig1 (ter1,ter2);; 
