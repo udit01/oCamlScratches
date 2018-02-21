@@ -156,15 +156,24 @@ let mostGenUnif signature (t,u) =
     mgu signature (t,u)
 
 
-let v2tl1 = [(V (Var "a") , V (Var "map a"))]
-let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)]
-
+(* include that in the quiz ? *)
+let t0 = Node (S "Unit",[])
 let t1 = V (Var "a");;
 let t2 = Node ( S "||" ,[t1]);;
-let t3 = Node (S "#",[t2;t2;t1;t1]);;
+let t3 = Node (S "#",[t2;t2;t1;t0]);;
+
+
+
+(* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
+let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)]
+
+(* let v2tl1 = [(V (Var "a") , V (Var "map a")) ; (V (Var "x") , V (Var "map x"))] *)
+let v2tl1 = [(V (Var "a") , t0) ]
+
 let t4 = substl v2tl1 t3;;
 
-let l1 = [t1;t2;t3;t4];;
+let l1 = [t0;t1;t2;t3;t4];;
+
 
 check_sig sig1;;
 
