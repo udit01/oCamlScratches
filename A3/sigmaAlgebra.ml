@@ -42,24 +42,23 @@ let  get_arity signat sym =
     getArr signat sym
 
 exception ArityLengthClash
-exception BadTerm
+exception BadOrEmptyTerm
 
 let and_l b1 b2 = (b1 && b2)
 
 (* checks but raises exception if wrong instead of returning false *)
-let wfterm si t = 
     (* I can check signature is well formed first here *)
-    let rec checkTerm signat term = match term with 
+let rec wfterm signat term = match term with 
+    (* None is a good empty term just a placeholder right ? *)
         (V (Var str)) -> true
         | Node ( sy , l) -> (if  ((length l) <> ( get_arity signat sy) ) then ((raise ArityLengthClash)) 
-                                else ( fold_left and_l (true) (map (checkTerm signat) l )  ) ) 
-        (* | _ -> ((raise BadTerm))  *)
-        in
-    checkTerm si t
+                                else ( fold_left and_l (true) (map (wfterm signat) l )  ) ) 
+        | _ -> ((raise BadOrEmptyTerm)) 
 
 let ht term = 
     let rec hgt h t = (match t with 
-        (V (Var str)) -> h
+        None -> 0
+        |(V (Var str)) -> h
         | Node (sym, l) -> 1 + (fold_left max (0) (map (hgt h) l))
         )
     in
@@ -68,7 +67,8 @@ let ht term =
 let add_l i1 i2 = (i1 + i2)
 let size term = 
     let rec siz s t = (match t with 
-        (V (Var str))-> s
+        None -> 0
+        | (V (Var str))-> s
         | Node (sym,l) -> 1 + (fold_left (add_l) (0) (map (siz s) l) )
         )
     in
@@ -86,7 +86,8 @@ let cmp a b = if (a=b) then (0) else (1);;
 
 let vars term = 
     let rec vrs vl t = (match t with 
-        (V v)-> v::vl
+        None -> []
+        |(V v)-> v::vl
         | Node (sym,l) ->  ( concat (map (vrs []) l) )
         )
     in
@@ -128,7 +129,8 @@ let findSubs v2tlist v =
 (* term to substituted term *)
 let substl v2tl term = 
     let rec subs v2tl t = (match t with 
-        (V v)-> (findSubs v2tl v)
+        None -> None
+        |(V v)-> (findSubs v2tl v)
         | Node (sym,l) -> Node( sym ,( map (subs v2tl) l ))
         )
     in
@@ -175,22 +177,21 @@ let rec mgu signat (t,u) = match (t,u) with
                                                         | _ -> raise MalformedList
                                                     in
                                                 (iter [] (l1,l2)) ) )
+    | _ -> raise NOT_UNIFIABLE
     (* in
     mgu signature (t,u) *)
 
+(* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
+let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ) ];;
+check_sig sig1;;
 
-(* include that in the quiz ? *)
+(* let v2tl1 = [(V (Var "a") , V (Var "map a")) ; (V (Var "x") , V (Var "map x"))] *)
+(* a substitution below *)
 let t0 = Node (S "Unit",[])
 let t1 = V (Var "a");;
 let t2 = Node ( S "||" ,[t1]);;
 let t3 = Node (S "#",[t2;t2;t1;t0]);;
 
-
-
-(* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
-let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ) ]
-
-(* let v2tl1 = [(V (Var "a") , V (Var "map a")) ; (V (Var "x") , V (Var "map x"))] *)
 let v2tl1 = [(V (Var "a") , t0) ]
 
 let t4 = substl v2tl1 t3;;
@@ -201,8 +202,12 @@ let l1 = [t0;t1;t2;t3;t4;t5;t6];;
 let ter1 = Node(S "+" , [t1;t5]);;
 let ter2 = Node(S "+" , [t5;t1] );;
 let ter3 = Node(S "-" , [t5;t1] );;
+let vx = V (Var "x");;
+let ter4 = Node(S "+" , [vx;t0]);;
+let ter5 = Node(S "+" , [t1;vx]);;
+let ter6 = Node(S "+" , [vx;t0]);;
+let ter7 = Node(S "+" , [t2;vx]);;
 
-check_sig sig1;;
 
 let u x = ()
 let rec checker signat i l = match l with
@@ -214,9 +219,12 @@ let rec checker signat i l = match l with
 
 checker sig1 0 l1;;
 
-(* Erraneous cases:- *)
+(* Other cases are wfterms , height, size, vars, substitution , composition, mgu of interlinked, some interesting mgu's *)
+(* MGU cases are:- *)
 
- (* should be non unifiable  *)
- mgu sig1 (t6,t1);;
- (* should be unifiable  *)
- mgu sig1 (ter1,ter2);; 
+mgu sig1 (vx,t5);;
+mgu sig1 (t5,vx);;
+mgu sig1 (t6,vx);;
+mgu sig1 (vx,t6);;
+mgu sig1 (ter4,ter5);;
+mgu sig1 (ter6,ter7);;
