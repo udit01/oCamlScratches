@@ -148,11 +148,11 @@ let rec findMatch vt sbl = match sbl with
 
 (* ORDER MATTERS *)
 (* implemented below of s1 O s2 ie s1(s2(term))  or s2s1*)
-let rec compos s2 s1 = match s1 with
+let rec compose s2 s1 = match s1 with
         [] -> s2
         | (V var , t )::tl -> (let m = findMatch (V var) s2  in
-                                if(m = None) then (compos (s2@[(V var,t)]) tl )
-                                else if (m = t) then (compos (s2) tl )
+                                if(m = None) then (compose (s2@[(V var,t)]) tl )
+                                else if (m = t) then (compose (s2) tl )
                                 else (raise NOT_COMPOSABLE) )
         | _ -> raise InvalidComposition                        
 
@@ -173,7 +173,7 @@ let rec mgu signat (t,u) = match (t,u) with
     | (Node(sym1,l1),Node(sym2,l2)) -> (if(sym1 <> sym2) then (raise NOT_UNIFIABLE)
                                         else  ( let rec iter s (l1,l2) = match (l1,l2) with
                                                         ([],[]) -> s
-                                                        | (h1::t1,h2::t2) -> iter (compos s  (mgu signat ((substl s h1),(substl s h2)) )  )   (t1,t2)
+                                                        | (h1::t1,h2::t2) -> iter (compose s  (mgu signat ((substl s h1),(substl s h2)) )  )   (t1,t2)
                                                         | _ -> raise MalformedList
                                                     in
                                                 (iter [] (l1,l2)) ) )
@@ -182,49 +182,100 @@ let rec mgu signat (t,u) = match (t,u) with
     mgu signature (t,u) *)
 
 (* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
-let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ) ];;
-check_sig sig1;;
+let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ); Pair (S "0", 0);Pair (S "1", 0) ];;
+let sig2  = [Pair (S "+", 2); Pair (S "+", 1); Pair  (S "1", -1)];;
 
-(* let v2tl1 = [(V (Var "a") , V (Var "map a")) ; (V (Var "x") , V (Var "map x"))] *)
-(* a substitution below *)
+check_sig sig1;;
+(* bool = true *)
+check_sig sig2;;
+(* bool = false *)
+
+(* substitution below *)
+let var2termlist1 = [(V (Var "a") , Node (S "Unit",[])) ]
+
+(* basic checking terms for t0 to t6 *)
 let t0 = Node (S "Unit",[])
 let t1 = V (Var "a");;
 let t2 = Node ( S "||" ,[t1]);;
 let t3 = Node (S "#",[t2;t2;t1;t0]);;
-
-let v2tl1 = [(V (Var "a") , t0) ]
-
-let t4 = substl v2tl1 t3;;
+let t4 = substl var2termlist1 t3;;
 let t5 = V (Var "b");;
 let t6 = Node (S "@" , [t5;t1]);;
+let t7 = Node(S "+", [V (Var "x"); Node(S "+", [Node(S "1", [])])]);; (* invalid term *)
 
-let l1 = [t0;t1;t2;t3;t4;t5;t6];;
-let ter1 = Node(S "+" , [t1;t5]);;
-let ter2 = Node(S "+" , [t5;t1] );;
-let ter3 = Node(S "-" , [t5;t1] );;
-let vx = V (Var "x");;
-let ter4 = Node(S "+" , [vx;t0]);;
-let ter5 = Node(S "+" , [t1;vx]);;
-let ter6 = Node(S "+" , [vx;t0]);;
-let ter7 = Node(S "+" , [t2;vx]);;
+
+(* wfterm sig1 t7;; *)
+
+let list1 = [t0;t1;t2;t3;t4;t5;t6];;
 
 
 let u x = ()
 let rec checker signat i l = match l with
         [] -> (Printf.printf "Checking done for %d values.\n" i ) 
-        | hd::tl -> ( if((wfterm signat  hd) = true ) then (Printf.printf "Well formed term for : %d.\n" i) ;
-                      u (ht hd);u (size hd);u ( vars hd);u (substl v2tl1 hd );u (mgu signat (hd,hd)) ;(Printf.printf "Success for: %d\n" i ) ; checker signat (i+1) tl  )
+        | hd::tl -> ( ( u ( (wfterm signat  hd) = true ) ) ;
+                      u (ht hd);u (size hd);u ( vars hd);u (substl var2termlist1 hd );u (mgu signat (hd,hd)) ;(Printf.printf "Success for: %d\n" i ) ; checker signat (i+1) tl  )
         (* | _ ->    (Printf.printf "Error in positioning of lables and input data : %d\n" i )  ;;           *)
 ;;
 
-checker sig1 0 l1;;
+checker sig1 0 list1;;
 
 (* Other cases are wfterms , height, size, vars, substitution , composition, mgu of interlinked, some interesting mgu's *)
+
 (* MGU cases are:- *)
+(* advanced test cases for testing Mgu and compose , all terms are well formed *)
+let vx = V (Var "x");; (* variable x *)
+let vz = V (Var "z");;
+let vy = V (Var "y");;
+
+let ter1 = Node(S "+" , [t1;t5]);;
+let ter2 = Node(S "+" , [t5;t1] );;
+let ter3 = Node(S "-" , [t5;t1] );;
+let ter4 = Node(S "+" , [vx;t0]);;
+let ter5 = Node(S "+" , [t1;vx]);;
+let ter6 = Node(S "+" , [vx;t0]);;
+let ter7 = Node(S "+" , [t2;vx]);;
+let ter8 = Node(S "+", [vx; Node(S "1", [])]);;
+let ter9 = Node(S "+", [Node(S "+", [vx;vy]); Node(S "-", [vx; vy])]);;
+let ter10 = Node(S "+", [Node(S "-", [Node(S "1", []); vx]); Node(S "+", [vx; Node(S "0", [])])]);;
+let ter11 = Node(S "+", [Node(S "-", [Node(S "1", []); Node(S "0", [])]); Node(S "+", [vz;vx])]);;
+let ter12 = Node(S "+", [Node(S "-", [vx; Node(S "0", [])]);vy]);;
+let ter13 = Node(S "+", [vz; Node(S "-", [Node(S "1", []);vx])]);;
+
 
 mgu sig1 (vx,t5);;
+(* (term * term) list = [(V (Var "x"), V (Var "b"))] *)
 mgu sig1 (t5,vx);;
+(* (term * term) list = [(V (Var "b"), V (Var "x"))] *)
 mgu sig1 (t6,vx);;
+(* [(V (Var "x"), Node (S "@", [V (Var "b"); V (Var "a")]))] *)
 mgu sig1 (vx,t6);;
+(* [(V (Var "x"), Node (S "@", [V (Var "b"); V (Var "a")]))] *)
 mgu sig1 (ter4,ter5);;
-mgu sig1 (ter6,ter7);;
+(* [(V (Var "x"), V (Var "a")); (V (Var "a"), Node (S "Unit", []))] *)
+mgu sig1 ( ter8 , vz);;
+(* [(V (Var "z"), Node (S "+", [V (Var "x"); Node (S "1", [])]))] *)
+mgu sig1 ( ter8 , vy);;
+(* [(V (Var "y"), Node (S "+", [V (Var "x"); Node (S "1", [])]))] *)
+mgu sig1 ( ter9 , vz);;
+(* [(V (Var "z"),
+  Node (S "+",
+   [Node (S "+", [V (Var "x"); V (Var "y")]);
+    Node (S "-", [V (Var "x"); V (Var "y")])]))] *)
+mgu sig1 ( vz , vy);;
+ (* [(V (Var "z"), V (Var "y"))] *)
+mgu sig1 ( ter10 , ter11);;
+(* [(V (Var "x"), Node (S "0", [])); (V (Var "z"), Node (S "0", []))] *)
+mgu sig1 ( ter12 , ter13);;
+(* [(V (Var "z"), Node (S "-", [V (Var "x"); Node (S "0", [])]));
+ (V (Var "y"), Node (S "-", [Node (S "1", []); V (Var "x")]))] *)
+
+
+(* Not unifiable examples at last *)
+ mgu sig1 (ter6,ter7);;
+(* Exception: NOT_UNIFIABLE. *)
+
+mgu sig1 ( ter8 , ter9);;
+(* Exception: NOT_UNIFIABLE *)
+
+mgu sig1 ( ter9 , vy);;
+(* Exception: NOT_UNIFIABLE. *)
