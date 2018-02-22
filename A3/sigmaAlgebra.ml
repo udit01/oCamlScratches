@@ -1,23 +1,21 @@
+(* 
+Author -> Udit Jain
+Entry Number -> 2016CS10327 
+*)
+
+(* EXAMPLES ARE PROVIDED AT THE END *)
+
 open List
-(* Use HashTable later for efficiency *)
 type symbol = S of string
 type variable = Var of string
 
-(* type x = (C of int) *)
 type sym = Pair of symbol*int 
 type signat = sym list
 
 type term = V of variable | Node of symbol*(term list) | None
 
-(* let signatr str = match str with
-    S "+" -> 2 
-    |S "-" -> 2
-    | _ -> -1 *)
 
-(* Check signature can check for both functions and symbol lists *)
-(* IDK how the one in form of functions would work but for the list, its okay, *)
-    (* MY checker doesn't allow repeated symbols *)
-
+(* MY checker doesn't allow repeated symbols *)
 (* I have done hd::l instead of l@[hd] which reverses the order but makes the code faster in case of long signatures *)
 
 let check_sig si = 
@@ -26,7 +24,7 @@ let check_sig si =
         |(hd::tl) -> (if (mem hd l) then ((false,l)) else (match hd with
                                                             Pair (S str,i) -> if ((i>=0)) then (chk tl (hd::l)) else ((false,l))
                                                                 ) )  in
-    chk si [] ;;
+    match (chk si []) with (a,b) -> a ;;
 
 exception BadSignature
 exception SymbolNotFound
@@ -45,9 +43,7 @@ exception ArityLengthClash
 exception BadOrEmptyTerm
 
 let and_l b1 b2 = (b1 && b2)
-
 (* checks but raises exception if wrong instead of returning false *)
-    (* I can check signature is well formed first here *)
 let rec wfterm signat term = match term with 
     (* None is a good empty term just a placeholder right ? *)
         (V (Var str)) -> true
@@ -76,14 +72,7 @@ let size term =
 
 
 (* vars will return the list of variables in the term *)
-(* THE BELOW CMP function was eradication all variables except the last 1  *)
-(* let cmp a b = 0 *)
-(* let cmp a b = match (a,b) with
-    (V v,V v) -> 0
-    | (V v1, V v2) -> 1 *)
-
 let cmp a b = if (a=b) then (0) else (1);;
-
 let vars term = 
     let rec vrs vl t = (match t with 
         None -> []
@@ -92,25 +81,6 @@ let vars term =
         )
     in
     sort_uniq cmp (vrs [] term)
-(* Which is faster, sort_uniq inside recursive vrs or outside as now ? *)
-(* I can also return count of every variables, or retrun them sorted by duplicity *)
-
-(* What does he mean by finding a suitable represntation ? *)
-(* let variable2term vr = match vr with
-          Var "a" -> Node ( S "0" , [])
-       | _  ->V ( Var "unknown");; *)
-
-
-(* ENSURE SUBST IS EFFICIENTLY IMPLEMENTED *)
-(* v2t is a function that maps variable to term *)
-(* or could it be better if it's a list ? *)
-(* let substf v2t term = 
-    let rec subs v2t t = (match t with 
-        (V v)-> (v2t v)
-        | Node (sym,l) -> Node( sym ,( map (subs v2t) l ))
-        )
-    in
-    subs v2t term *)
 
 exception SubstitutionNotFound
 exception BadSubst
@@ -136,7 +106,6 @@ let substl v2tl term =
     in
     subs v2tl term
 
-
 exception MalformedList
 exception NOT_UNIFIABLE
 exception InvalidComposition
@@ -147,7 +116,7 @@ let rec findMatch vt sbl = match sbl with
         | (v,s)::tl -> (if (v=vt) then (s) else (findMatch vt tl) )  
 
 (* ORDER MATTERS *)
-(* implemented below of s1 O s2 ie s1(s2(term))  or s2s1*)
+(* implemented below of s1 O s2 ie s1(s2(term))  or s2s1 in notation*)
 let rec compose s2 s1 = match s1 with
         [] -> s2
         | (V var , t )::tl -> (let m = findMatch (V var) s2  in
@@ -156,9 +125,7 @@ let rec compose s2 s1 = match s1 with
                                 else (raise NOT_COMPOSABLE) )
         | _ -> raise InvalidComposition                        
 
-(* let mostGenUnif signature (t,u) =  *)
-    (* Do we do tail recursion below ? *)
-    (* how equivalance in exchanging t and u ? *)
+
 let rec mgu signat (t,u) = match (t,u) with
     (* (V v, V v) -> [] *)
     (V v1, V v2) -> (if (v1=v2) then([]) 
@@ -203,11 +170,9 @@ let t5 = V (Var "b");;
 let t6 = Node (S "@" , [t5;t1]);;
 let t7 = Node(S "+", [V (Var "x"); Node(S "+", [Node(S "1", [])])]);; (* invalid term *)
 
-
 (* wfterm sig1 t7;; *)
 
 let list1 = [t0;t1;t2;t3;t4;t5;t6];;
-
 
 let u x = ()
 let rec checker signat i l = match l with
@@ -220,7 +185,6 @@ let rec checker signat i l = match l with
 checker sig1 0 list1;;
 
 (* Other cases are wfterms , height, size, vars, substitution , composition, mgu of interlinked, some interesting mgu's *)
-
 (* MGU cases are:- *)
 (* advanced test cases for testing Mgu and compose , all terms are well formed *)
 let vx = V (Var "x");; (* variable x *)
@@ -269,7 +233,7 @@ mgu sig1 ( ter12 , ter13);;
 (* [(V (Var "z"), Node (S "-", [V (Var "x"); Node (S "0", [])]));
  (V (Var "y"), Node (S "-", [Node (S "1", []); V (Var "x")]))] *)
 
-
+(* 
 (* Not unifiable examples at last *)
  mgu sig1 (ter6,ter7);;
 (* Exception: NOT_UNIFIABLE. *)
@@ -278,4 +242,5 @@ mgu sig1 ( ter8 , ter9);;
 (* Exception: NOT_UNIFIABLE *)
 
 mgu sig1 ( ter9 , vy);;
-(* Exception: NOT_UNIFIABLE. *)
+(* Exception: NOT_UNIFIABLE.  *)
+*)
