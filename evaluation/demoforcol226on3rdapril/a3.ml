@@ -41,7 +41,7 @@ Printf.printf "(14)ht term11 : %d\n\n" (ht term11);;
 Printf.printf "(15)size term9 : %d\n" (size term9);;
 Printf.printf "(16)size term7 : %d\n" (size term7);;
 Printf.printf "(17)size term4 : %d\n" (size term4);;
-Printf.printf "(18)size term10 : %d\n" (size term10);;
+Printf.printf "(1zl8)size term10 : %d\n" (size term10);;
 Printf.printf "(19)size term11 : %d\n\n" (size term11);;
 
 Printf.printf "(20)vars term9 : ";; (vars term9);; Printf.printf("\n");;

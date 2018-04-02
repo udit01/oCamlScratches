@@ -54,7 +54,7 @@ let rec wfterm signat term = match term with
 let ht term = 
     let rec hgt h t = (match t with 
         None -> 0
-        |(V (Var str)) -> h
+        |(V (Var str)) -> 0
         | Node (sym, l) -> 1 + (fold_left max (0) (map (hgt h) l))
         )
     in
@@ -68,7 +68,7 @@ let size term =
         | Node (sym,l) -> 1 + (fold_left (add_l) (0) (map (siz s) l) )
         )
     in
-    siz 0 term
+    siz 1 term
 
 
 (* vars will return the list of variables in the term *)
