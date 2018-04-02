@@ -43,3 +43,4 @@ Lte(Const(4),Const(2));;
 (* 
 Other things that I have implemented are Xor , Max, Min, Var 15 examples given in the code itself
 *)
+(* Automate the checking? *)
