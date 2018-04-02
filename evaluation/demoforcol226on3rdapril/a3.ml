@@ -1,34 +1,36 @@
-let sig1 = [("X",0);("Y",0);("f",1);("g",2);("h",3);("*",2)];;
-let sig2 = [("X",0);("Y",0);("Z",0);("f",1);("g",2);("f",3);("*",2)];;
-let sig3 = [("f",1)];;
-let sig4 = [("X",0);("Y",0);("Z",0)];;
+let sig1 = [Pair (S "X",0);Pair (S "Y",0);Pair (S "f",1);Pair (S "g",2);Pair (S "h",3);Pair (S "*",2)];;
+let sig2 = [Pair (S "X",0);Pair (S "Y",0);Pair (S "Z",0);Pair (S "f",1);Pair (S "g",2);Pair (S "f",3);Pair (S "*",2)];;
+let sig3 = [Pair (S "f",1)];;
+let sig4 = [Pair (S "X",0);Pair (S "Y",0);Pair (S "Z",0)];;
+let sig5 = [Pair (S "$",2); Pair (S "g",2) ; Pair(S "*",2); Pair(S "2",0); Pair(S "4", 0) ];;
+let sig6 = [Pair (S "*",2); Pair (S "g",2) ]
 
-let term1 = (Node ("f",[V "X"]));;
-let term2 = (Node ("g",[V "X";Node("h",[Node("f",[V "X"]);V "Y"])]));;
-let term3 = (Node ("g",[V "X";Node("*",[V "Y";Node ("*",[V "X";V "Y"])])]));;
-let term4 = (Node ("g",[V "X";Node("*",[V "Y";V "X"])]));;
-let term5 = (Node ("g",[V "Z";Node("*",[V "X";V "Z"])]));;
-let term6 = (Node ("g",[V "Z";Node("g",[V "X";V "Z"])]));;
-let term7 = (V "X");;
-let term8 = (Node ("K",[]));;
-let term9 = (Node ("X",[]));;
-let term10 = (Node ("g",[V "X";Node("h",[Node("f",[V "X"]);V "Y";Node ("X",[])])]));;
-let term11 = (Node ("g",[V "X";Node("h",[Node("f",[V "X"]);V "Y";Node ("f",[V "X"])])]));;
-let term12 = (Node ("g",[V "Z";Node("*",[V "Z";Node ("*",[V "X";V "Y"])])]));;
-let term13 = (Node ("$",[V "P";V"Q"]));;
-let term14 = (Node ("$",[Node ("2",[]); Node ("4",[])]));;
-let term15 = (Node ("$",[Node ("2",[]); Node ("3",[])]));;
+let term1 = (Node (S "f",[V (Var "X")]));;
+let term2 = (Node (S "g",[V (Var "X");Node (S "h",[Node (S "f",[V (Var "X")]);V (Var "Y")])]));;
+let term3 = (Node (S "g",[V (Var "X");Node (S "*",[V (Var "Y");Node (S "*",[V (Var "X");V (Var "Y")])])]));;
+let term4 = (Node (S "g",[V (Var "X");Node (S "*",[V (Var "Y");V (Var "X")])]));;
+let term5 = (Node (S "g",[V (Var "Z");Node (S "*",[V (Var "X");V (Var "Z")])]));;
+let term6 = (Node (S "g",[V (Var "Z");Node (S "g",[V (Var "X");V (Var "Z")])]));;
+let term7 = (V (Var "X"));;
+let term8 = (Node (S "K",[]));;
+let term9 = (Node (S "X",[]));;
+let term10 = (Node (S "g",[V (Var "X");Node (S "h",[Node (S "f",[V (Var "X")]);V (Var "Y");Node (S "X",[])])]));;
+let term11 = (Node (S "g",[V (Var "X");Node (S "h",[Node (S "f",[V (Var "X")]);V (Var "Y");Node (S "f",[V (Var "X")])])]));;
+let term12 = (Node (S "g",[V (Var "Z");Node (S "*",[V (Var "Z");Node (S "*",[V (Var "X");V (Var "Y")])])]));;
+let term13 = (Node (S "$",[V (Var "P");V (Var "Q")]));;
+let term14 = (Node (S "$",[Node (S "2",[]); Node (S "4",[])]));;
+let term15 = (Node (S "$",[Node (S "2",[]); Node (S "3",[])]));;
 
 Printf.printf "(1)check_sig sig1 : %B\n" (check_sig sig1);;
 Printf.printf "(2)check_sig sig2 : %B\n" (check_sig sig2);;
 Printf.printf "(3)check_sig sig3 : %B\n" (check_sig sig3);;
 Printf.printf "(4)check_sig sig4 : %B\n\n" (check_sig sig4);;
 
-Printf.printf "(5)wfterm term1 sig1 : %B\n" (wfterm term1 sig1);;
-Printf.printf "(6)wfterm term2 sig1 : %B\n" (wfterm term2 sig1);;
-Printf.printf "(7)wfterm term7 sig4 : %B\n" (wfterm term7 sig4);;
-Printf.printf "(8)wfterm term8 sig4 : %B\n" (wfterm term8 sig4);;
-Printf.printf "(9)wfterm term9 sig4 : %B\n\n" (wfterm term9 sig4);;
+Printf.printf "(5)wfterm sig1 term1 : %B\n" (wfterm sig1 term1);;
+(* Printf.printf "(6)wfterm sig1 term2 : %B\n" (wfterm sig1 term2);; *)
+Printf.printf "(7)wfterm sig4 term7 : %B\n" (wfterm sig4 term7);;
+(* Printf.printf "(8)wfterm sig4 term8 : %B\n" (wfterm sig4 term8);; *)
+Printf.printf "(9)wfterm sig4 term9 : %B\n\n" (wfterm sig4 term9);;
 
 Printf.printf "(10)ht term9 : %d\n" (ht term9);;
 Printf.printf "(11)ht term7 : %d\n" (ht term7);;
@@ -49,12 +51,12 @@ Printf.printf "(23)vars term10 : ";; (vars term10);; Printf.printf("\n");;
 Printf.printf "(24)vars term11 : ";; (vars term11);; Printf.printf("\n\n");;
 
 
-Printf.printf "(31)mgu term14 term13 : ";; (mgu term14 term13);; Printf.printf("\n");;
-Printf.printf "(33)mgu term3  term12 : ";; ((mgu term3 term12));; Printf.printf("\n");;
-Printf.printf "(34)mgu term12 term3  : ";; ((mgu term12 term3));; Printf.printf("\n\n");;
+Printf.printf "(31)mgu term14 term13 : ";; (mgu sig5 (term14, term13));; Printf.printf("\n");;
+Printf.printf "(33)mgu term3  term12 : ";; ((mgu sig5 (term3, term12)));; Printf.printf("\n");;
+Printf.printf "(34)mgu term12 term3  : ";; ((mgu sig5 (term12, term3)));; Printf.printf("\n\n");;
 
-Printf.printf "(33.1)subst term12 (mgu term3 term12)  : ";; (subst2 term12 (mgu term3 term12));; Printf.printf("\n");;
-Printf.printf "(33.2)subst term3  (mgu term3 term12)  : ";; (subst2 term3 (mgu term3 term12));; Printf.printf("\n\n");;
+Printf.printf "(33.1)subst term12 (mgu term3 term12)  : ";; (substl  (mgu sig5 (term3, term12))) term12;; Printf.printf("\n");;
+Printf.printf "(33.2)subst term3  (mgu term3 term12)  : ";; (substl  (mgu sig5 (term3, term12))) term3;; Printf.printf("\n\n");;
 
-Printf.printf "(34.1)subst term12 (mgu term12 term3)  : ";; (subst2 term12 (mgu term12 term3));; Printf.printf("\n");;
-Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; (subst2 term3 (mgu term12 term3));; Printf.printf("\n\n");;
+Printf.printf "(34.1)subst term12 (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term12;; Printf.printf("\n");;
+Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term3;; Printf.printf("\n\n");;
