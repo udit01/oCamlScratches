@@ -60,12 +60,26 @@ Closure is Table * Expression
 Table is Variable -> Closure 
 *)
 
-type closure = Cl of table * exp
+(* type closure = Cl of table * exp
   and table = (variable, closure) Hashtbl.t ;;
 
 
 type closure = Cl of table * exp
-and table = variable -> closure ;;
+and table = variable -> closure ;; *)
 
-type closure = Cl of table * exp
+
+type closure = Null |  Cl of table * exp
 and table = (variable * closure) list ;;
+
+type answer = VClosure of table * exp 
+              (* | Tuple of answer list etc *)
+
+let rec lookup (gamma:table) ((V var):variable) : closure = match gamma with
+      [] -> Null 
+      | (V v , cl)::tl -> if (v = var) then (cl) else (lookup tl (V var))
+      ;;
+                  
+
+let rec evaluate ((clos:closure), (stack:closure list)) = match (clos,stack) with
+        ( Cl (gamma, V v) , stack ) -> ( lookup gamma (V v) , stack )
+        | ( Cl (gamma',Lambda (V v, exp)  ) , stack) -> 
