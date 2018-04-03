@@ -27,7 +27,7 @@ Printf.printf "(3)check_sig sig3 : %B\n" (check_sig sig3);;
 Printf.printf "(4)check_sig sig4 : %B\n\n" (check_sig sig4);;
 
 Printf.printf "(5)wfterm sig1 term1 : %B\n" (wfterm sig1 term1);;
-(* Printf.printf "(6)wfterm sig1 term2 : %B\n" (wfterm sig1 term2);; *)
+Printf.printf "(6)wfterm sig1 term2 : %B\n" (wfterm sig1 term2);;
 Printf.printf "(7)wfterm sig4 term7 : %B\n" (wfterm sig4 term7);;
 (* Printf.printf "(8)wfterm sig4 term8 : %B\n" (wfterm sig4 term8);; *)
 Printf.printf "(9)wfterm sig4 term9 : %B\n\n" (wfterm sig4 term9);;
@@ -59,4 +59,4 @@ Printf.printf "(33.1)subst term12 (mgu term3 term12)  : ";; (substl  (mgu sig5 (
 Printf.printf "(33.2)subst term3  (mgu term3 term12)  : ";; (substl  (mgu sig5 (term3, term12))) term3;; Printf.printf("\n\n");;
 
 Printf.printf "(34.1)subst term12 (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term12;; Printf.printf("\n");;
-Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term3;; Printf.printf("\n\n");;
+Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; (substl  (mgu sig6 (term3, term12))) term3;; Printf.printf("\n\n");;

@@ -30,10 +30,11 @@ execute ([],gamma,(compile e9)) ;;
 let e10 = Mod(Proj(2,Tuple[Const(2);Const(5);Const(8)]));;
 execute ([],gamma,(compile e10)) ;;
 
-let e11 =Or(
+
+let e11 = Or(
 	EqI(Const(5),Const(5)),
 	And(EqI(Sub(Const(2),Const(1)),Const(1)),
-		Gt( Mod(Proj(2,Tuple[Const(2);Const(5);Const(8)])),Const(2))
+		Mod(Proj(2,Tuple[Const(2);Const(5);Const(8)]))
 	)
 );;
 execute ([],gamma,(compile e11)) ;;
@@ -47,7 +48,7 @@ execute ([],gamma,(compile e13)) ;;
 let e14 = Gte(Const(4),Const(2));;
 execute ([],gamma,(compile e14)) ;;
 
-let e15 = Lte(Const(4),Const(2));;
+let e15 = Lte(Const(4),Const(2)) ;;
 execute ([],gamma,(compile e15)) ;;
 
 (* We weren't even told what was if then else till then *)
@@ -57,3 +58,10 @@ execute ([],gamma,(compile e15)) ;;
 (* 
 Other things that I have implemented are Xor , Max, Min, Var 15 examples given in the code itself
 *)
+
+(* let e11 =Or(
+	EqI(Const(5),Const(5)),
+	And(EqI(Sub(Const(2),Const(1)),Const(1)),
+		Gt( Mod(Proj(2,Tuple[Const(2);Const(5);Const(8)])),Const(2))
+	)
+);; *)
