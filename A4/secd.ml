@@ -24,14 +24,15 @@ Most importantly, you need to provide inputs that demonstrate that your implemen
 *)
 
 (* EXAMPLES ARE PROVIDES AT THE END *)
-type variable = Var of string 
 
-type exp =  true | false 
-            | V of variable (*variable is arbitary you could change this and gamma*)
+(* type variable = Var of string 
+
+type exp =  V of variable (*variable is arbitary you could change this and gamma*)
             | Lambda of variable * exp
             | Apply of exp * exp
-            
-            (* | Not of exp
+             *)
+            (*  true | false 
+            | Not of exp
             | Or of exp*exp
             | And of exp*exp
             | Xor of exp*exp
@@ -53,3 +54,19 @@ type exp =  true | false
             | Tuple of (exp list)
             | Proj of int * (exp) *)
 
+(* Answer of type value closure  *)
+
+(* 
+Closure is Table * Expression
+Table is Variable -> Closure 
+*)
+(* 
+type closure = Cl of table * exp
+  and table = (variable, closure) Hashtbl.t ;;
+
+
+type closure = Cl of table * exp
+and table = variable -> closure ;;
+
+type closure = Cl of table * exp
+and table = (variable * closure) list ;; *)
