@@ -25,12 +25,12 @@ Most importantly, you need to provide inputs that demonstrate that your implemen
 
 (* EXAMPLES ARE PROVIDES AT THE END *)
 
-(* type variable = Var of string 
+type variable = Var of string 
 
 type exp =  V of variable (*variable is arbitary you could change this and gamma*)
             | Lambda of variable * exp
             | Apply of exp * exp
-             *)
+            
             (*  true | false 
             | Not of exp
             | Or of exp*exp

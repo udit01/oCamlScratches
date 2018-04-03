@@ -26,11 +26,13 @@ Most importantly, you need to provide inputs that demonstrate that your implemen
 (* EXAMPLES ARE PROVIDES AT THE END *)
 type variable = Var of string 
 
-type exp =  V of variable (*variable is arbitary you could change this and gamma*)
+type exp =  true | false
+            | C of int (*Const of int*)
+            | V of variable (*variable is arbitary you could change this and gamma*)
             | Lambda of variable * exp
             | Apply of exp * exp
             
-            (*  true | false 
+            (* LOCAL DEFINITIONS 
             | Not of exp
             | Or of exp*exp
             | And of exp*exp
@@ -74,14 +76,24 @@ and table = (variable * closure) list ;;
 type answer = VClosure of table * exp 
               (* | Tuple of answer list etc *)
 
-let rec lookup (gamma:table) ((V var):variable) : closure = match gamma with
+let rec lookup (gamma:table) ((Var s):variable) : closure = match gamma with
       [] -> Null 
-      | (V v , cl)::tl -> if (v = var) then (cl) else (lookup tl (V var))
+      | (Var str , cl)::tl -> if (s = str) then (cl) else (lookup tl (Var s))
       ;;
                   
+(* Make an unpack function *)
 
-let rec evaluate ((clos:closure), (stack:closure list)) = match (clos,stack) with
+exception NullClosure
+exception ExpectedClosureOnStack
+exception MalformedExp
+let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
 (* base case ? *)
-        ( Cl (gamma, V v) , stack ) -> evaluate ( lookup gamma (V v) , stack )
-        | ( Cl (gamma',Lambda (V v, exp')  ) , (Cl(gamma,exp))::stack) -> evaluate ( Cl (gamma'::(V v,Cl(gamma,exp))) , stack ) 
-        | ( Cl (gamma, Apply(exp1,exp2)) , stack) -> (  ) 
+          (Null, stack) -> raise NullClosure
+        | ( Cl (gamma , true ) , stack ) -> VClosure(gamma,true)
+        | ( Cl (gamma , false) , stack ) -> VClosure(gamma,false)
+        | ( Cl (gamma , C i  ) , stack ) -> VClosure(gamma, C i)  
+        | ( Cl (gamma , V v  ) , stack ) -> execute ( lookup gamma v , stack ) 
+        | ( Cl (gamma', Lambda(v, exp')) , (Cl(gamma,exp))::stack ) -> execute ( Cl ( (v, Cl(gamma,exp))::gamma' ,  exp' ) , stack ) 
+        (* | ( Cl (gamma', Lambda(v, exp')) , [] ) -> raise ExpectedClosureOnStack *)
+        | ( Cl (gamma , Apply(exp1,exp2)) , stack) -> execute( Cl(gamma,exp1) , (Cl(gamma,exp2))::stack  ) 
+        | _ -> raise MalformedExp
