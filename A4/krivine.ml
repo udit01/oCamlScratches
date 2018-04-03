@@ -81,5 +81,7 @@ let rec lookup (gamma:table) ((V var):variable) : closure = match gamma with
                   
 
 let rec evaluate ((clos:closure), (stack:closure list)) = match (clos,stack) with
-        ( Cl (gamma, V v) , stack ) -> ( lookup gamma (V v) , stack )
-        | ( Cl (gamma',Lambda (V v, exp)  ) , stack) -> 
+(* base case ? *)
+        ( Cl (gamma, V v) , stack ) -> evaluate ( lookup gamma (V v) , stack )
+        | ( Cl (gamma',Lambda (V v, exp')  ) , (Cl(gamma,exp))::stack) -> evaluate ( Cl (gamma'::(V v,Cl(gamma,exp))) , stack ) 
+        | ( Cl (gamma, Apply(exp1,exp2)) , stack) -> (  ) 
