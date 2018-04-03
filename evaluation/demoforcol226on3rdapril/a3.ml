@@ -60,3 +60,9 @@ Printf.printf "(33.2)subst term3  (mgu term3 term12)  : ";; (substl  (mgu sig5 (
 
 Printf.printf "(34.1)subst term12 (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term12;; Printf.printf("\n");;
 Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; (substl  (mgu sig6 (term12, term3))) term3;; Printf.printf("\n\n");;
+
+
+Printf.printf "(33.1)subst term12 (mgu term3 term12)  : ";; subst  (mgut  term3 term12) term12;; Printf.printf("\n");;
+Printf.printf "(33.2)subst term3  (mgu term3 term12)  : ";; subst  (mgut  term3 term12) term3;; Printf.printf("\n\n");;
+Printf.printf "(34.1)subst term12 (mgu term12 term3)  : ";; subst  (mgut  term12 term3) term12;; Printf.printf("\n");;
+Printf.printf "(34.2)subst term3  (mgu term12 term3)  : ";; subst  (mgut  term12 term3) term3;; Printf.printf("\n\n");;

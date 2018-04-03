@@ -148,6 +148,39 @@ let rec mgu signat (t,u) = match (t,u) with
     (* in
     mgu signature (t,u) *)
 
+
+let rec subst s x = 
+    match x with
+        V v -> let rec find (V v) s = match s with
+                [] -> V v
+                | (a,b)::xs -> if ((V v) = a) then b else find (V v) xs in
+                find (V v) s
+    | Node(sym, l) -> if (l = []) then Node(sym, l)
+                else let subst1 x = subst s x in
+                let l' = map subst1 l in 
+                Node(sym, l')
+    | _ -> x;;
+      
+exception NOT_UNIFIABLE;;
+let rec mgut t u  = 
+    match (t, u) with
+        (V x, V y) -> if (x = y) then [] else [(V x, V y)]
+    | (V x, Node(sym, [])) -> [(V x, Node(sym, []))]
+    | (Node(sym, []), V x) -> [(V x, Node(sym, []))]
+    | (V x, Node(sym, l)) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE 
+                            else [(V x, Node(sym, l))]
+    | (Node(sym, l), V x) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE
+                            else [(V x, Node(sym, l))]
+    | (Node(sym, []), Node(sym', [])) -> if (sym = sym') then [] else raise NOT_UNIFIABLE
+    | (Node(sym, t'), Node(sym', u')) -> if (List.length t' = List.length u' && sym = sym') then
+                    let rec fold sigma t u = match (t,u) with
+                    ([],[]) -> sigma
+                | (hl::tl, hr::tr) -> fold (compose sigma (mgut (subst sigma hl) (subst sigma hr))) tl tr
+                | _ -> raise NOT_UNIFIABLE in
+            fold [] t' u'
+            else raise NOT_UNIFIABLE
+    | _ -> raise NOT_UNIFIABLE;; 
+    
 (* let sig1 = [Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4)] *)
 let sig1 = [Pair(S "Unit",0);Pair(S "+",2); Pair(S "-",2) ; Pair(S "*",2) ; Pair(S "||",1) ; Pair(S "#", 4) ; Pair( S "@" ,2 ); Pair (S "0", 0);Pair (S "1", 0) ];;
 let sig2  = [Pair (S "+", 2); Pair (S "+", 1); Pair  (S "1", -1)];;
