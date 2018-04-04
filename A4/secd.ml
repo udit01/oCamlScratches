@@ -27,19 +27,17 @@ Most importantly, you need to provide inputs that demonstrate that your implemen
 
 type variable = Var of string 
 
+
 type exp =   true | false 
             | V of variable (*variable is arbitary you could change this and gamma*)
-            | Lambda of variable * exp
-            | Apply of exp * exp
-            
-            (*  true | false 
             | Not of exp
             | Or of exp*exp
             | And of exp*exp
             | Xor of exp*exp
             | Impl of exp*exp
             | Const of int 
-            | Mod of exp
+            | Mod of exp*exp
+            | Abs of exp
             | Add of exp*exp       
             | Sub of exp*exp       
             | Mul of exp*exp       
@@ -53,10 +51,86 @@ type exp =   true | false
             | Gte of exp*exp
             | Lte of exp*exp
             | Tuple of (exp list)
-            | Proj of int * (exp) *)
+            | Proj of int * (exp)
+            | L of lambda
+            | Apply of exp * exp 
+            (* Let x = e1 in e2
+            Def d1 in d2
+            Lambda, Apply
+            Sequential, Parallel definitions 
+            Local scoping rules?  *)
+and lambda = Lambda of variable * exp
 
 (* Answer of type value closure  *)
+type ans = AInt of int | ABool of bool | Atuple of (ans list) | VClosure of table * lambda
+  and table = (variable * ans) list;;
 
+
+type opcode = TRUE 
+            | FALSE 
+            | LOOKUP of variable
+            | NOT 
+            | OR 
+            | AND
+            | XOR
+            | IMPL
+            | CONST of int
+            | ABS
+            | MOD
+            | ADD
+            | SUB
+            | MUL
+            | DIV
+            | POW
+            | MAX
+            | MIN
+            | EQI
+            | GT
+            | LT
+            | GTE
+            | LTE
+            | PROJ of int
+            | TUP of ((opcode list) list)
+            | CLOSURE of variable * (opcode list)
+            | RET
+            | APPLY
+
+(* type opcode =  *)
+exception NotATuple
+
+let rec compile e = match e with
+        true ->  [TRUE]
+        | false -> [FALSE]
+        | V v -> [LOOKUP(v)]
+        | Not (e1) -> (compile e1) @ [NOT]
+        | Or (e1, e2) -> (compile e1) @ (compile e2) @ [OR]
+        | And (e1, e2) -> (compile e1) @ (compile e2) @ [AND]
+        | Xor (e1, e2) -> (compile e1) @ (compile e2) @ [XOR]
+        | Impl (e1, e2) ->  (compile e1) @ (compile e2) @ [IMPL]
+        | Const (n) -> [CONST (n)]
+        | Mod (e1,e2) -> (compile e1)@(compile e2) @ [MOD]
+        | Abs (e1) -> (compile e1) @ [ABS]
+        | Add (e1,e2) -> (compile e1) @ (compile e2) @ [ADD]
+        | Sub (e1,e2) -> (compile e1) @ (compile e2) @ [SUB]
+        | Mul (e1,e2) -> (compile e1) @ (compile e2) @ [MUL]
+        | Div (e1,e2) -> (compile e1) @ (compile e2) @ [DIV]
+        | Pow (e1,e2) ->  (compile e1) @ (compile e2) @ [POW]
+        | Max (e1,e2) ->  (compile e1) @ (compile e2) @ [MAX]
+        | Min (e1,e2) ->  (compile e1) @ (compile e2) @ [MIN]
+        | EqI (e1,e2) -> (compile e1) @ (compile e2) @ [EQI]
+        | Gt (e1,e2) -> (compile e1) @ (compile e2) @ [GT]
+        | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
+        | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
+        | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
+        | Tuple l -> [TUP (List.map compile l)] 
+        | Proj (i,Tuple l) -> [TUP(List.map compile l)] @ [PROJ(i)]
+        (* Could also have compiled only i'th of the tuple *)
+        (* | Proj(i, Tuple l) -> compile (List.nth l i) *)
+        | Proj (i,_) -> raise NotATuple
+        | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e))] @ [RET]
+        | Apply (e1, e2) -> compile(e1) @ compile(e2) @ [APPLY]
+      ;;
+        
 (* 
 Closure is Table * Expression
 Table is Variable -> Closure 
@@ -71,3 +145,15 @@ and table = variable -> closure ;;
 
 type closure = Cl of table * exp
 and table = (variable * closure) list ;; *)
+
+exception RuntimeError
+
+(* Output of SECD is answer or full state ? *)
+let rec execute (stack, gamma, opcodes, dump) = 
+        match (stack, gamma, opcode, dump) with
+        (a::s, g, [], d) -> a
+        |(s, g, TRUE::o, d) -> execute ((ABool true)::s, g, o, d) 
+        |(s, g, FALSE::o, d) -> execute ((ABool false)::s, g, o, d)
+        | 
+
+
