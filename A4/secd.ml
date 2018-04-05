@@ -53,10 +53,13 @@ type exp =   true | false
             | Tuple of (exp list)
             | Proj of int * (exp)
             | L of lambda
-            | Apply of exp * exp 
-            (* Let x = e1 in e2
+            | Apply of exp * exp
+            | Let of variable * exp * exp 
+            (* Let x = e1 in e2 ^^ *)
+            | Ifte of exp * exp * exp
+            (* If e1 then e2 else e3 ^^ *)
+            (* 
             Def d1 in d2
-            If then else
             Sequential, Parallel definitions 
             Local scoping rules?  *)
 and lambda = Lambda of variable * exp
@@ -166,6 +169,8 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         |(s, g, TRUE::o, d) -> execute ((ABool true)::s, g, o, d) 
         |(s, g, FALSE::o, d) -> execute ((ABool false)::s, g, o, d)
         |(s, g, LOOKUP(v)::o, d) -> execute((lookup g v)::s, g, o, d)
+        (* |(s, g1@(v,a)@g2 , LOOKUP(v)::o, d) -> execute((a)::s, g, o, d) *)
+        (* Is the above pattern matching allowed ? and if we have multiple then will it do it correctly ? ie pick the first one ? *)
         |((Abool b)::s, g, NOT::o, d) -> execute((Abool (not b))::s, g, o, d)
         |((Abool b1)::(Abool b2)::s, g, OR::o, d) -> execute((Abool (b1 || b2))::s, g, o, d)
         |((Abool b1)::(Abool b2)::s, g, AND::o, d) -> execute((Abool (b1 && b2))::s, g, o, d)
