@@ -45,7 +45,7 @@ type exp =   true | false
             | Pow of exp*exp
             | Max of exp*exp
             | Min of exp*exp
-            | EqI of exp*exp
+            | Eql of exp*exp
             | Gt of exp*exp
             | Lt of exp*exp
             | Gte of exp*exp
@@ -63,9 +63,14 @@ and lambda = Lambda of variable * exp
 
 (* Answer of type value closure  *)
 (* No diffrence between Closure and ValueClosure for SECD machine? *)
-type ans = AInt of int | ABool of bool | Atuple of (ans list) | VClosure of table * lambda
+type ans = AInt of int 
+          | ABool of bool 
+          | Atuple of (ans list) 
+          (* | VClosure of table * lambda  *)
+          | AClosure of table * variable * (opcode list)
   and table = (variable * ans) list;;
 
+type state = (ans list) * (table) * (opcode list)
 
 type opcode = TRUE 
             | FALSE 
@@ -85,7 +90,7 @@ type opcode = TRUE
             | POW
             | MAX
             | MIN
-            | EQI
+            | EQL
             | GT
             | LT
             | GTE
@@ -118,7 +123,7 @@ let rec compile e = match e with
         | Pow (e1,e2) ->  (compile e1) @ (compile e2) @ [POW]
         | Max (e1,e2) ->  (compile e1) @ (compile e2) @ [MAX]
         | Min (e1,e2) ->  (compile e1) @ (compile e2) @ [MIN]
-        | EqI (e1,e2) -> (compile e1) @ (compile e2) @ [EQI]
+        | EQL (e1,e2) -> (compile e1) @ (compile e2) @ [EQL]
         | Gt (e1,e2) -> (compile e1) @ (compile e2) @ [GT]
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
@@ -128,7 +133,7 @@ let rec compile e = match e with
         (* Could also have compiled only i'th of the tuple *)
         (* | Proj(i, Tuple l) -> compile (List.nth l i) *)
         | Proj (i,_) -> raise NotATuple
-        | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e))] @ [RET]
+        | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e)@[RET])]
         | Apply (e1, e2) -> compile(e1) @ compile(e2) @ [APPLY]
       ;;
         
@@ -147,8 +152,14 @@ and table = variable -> closure ;;
 type closure = Cl of table * exp
 and table = (variable * closure) list ;; *)
 
-exception RuntimeError
+(* Correct the below function *)
+let lookup (t:table) (v:variable) : ans = 
+      AInt 1;;
 
+
+(* When a tuple forms do we have to evaluate all projections even if only 1 of them is required ? *)
+exception RuntimeError
+let executeCurry execute stack gamma dump opcodelist = execute (stack,gamma,opcodelist,dump)
 (* Output of SECD is answer or full state ? *)
 let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump) = 
         match (stack, gamma, opcode, dump) with
@@ -173,7 +184,32 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
                                                           |(false,true)  -> true
                                                           |(false,false) -> true
                                                         ))::s, g, o, d)                                                        
-        |((Abool b1)::(Abool b2)::s, g, (CONST n)::o, d) -> execute((AInt n), g, o, d)
-        |
+        |(s, g, (CONST n)::o, d) -> execute((AInt n)::s, g, o, d)
+        |((AInt i)::s, g, ABS::o, d) -> execute((Aint (abs i))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, MOD::o, d) -> execute((AInt(mod i1 i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, ADD::o, d) -> execute((AInt(i1 + i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, SUB::o, d) -> execute((AInt(i1 - i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, MUL::o, d) -> execute((AInt(i1 * i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, DIV::o, d) -> execute((AInt(i1 / i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, POW::o, d) -> execute((AInt( int_of_float( float_of_int(i1)**float_of_int(i2))))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, MAX::o, d) -> execute((AInt( max i1 i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, MIN::o, d) -> execute((AInt( min i1 i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, EQL::o, d) -> execute((ABool( i1 = i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, GT::o, d) -> execute((ABool( i1 > i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, LT::o, d) -> execute((ABool( i1 < i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, GTE::o, d) -> execute((ABool( i1 >= i2 ))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, LTE::o, d) -> execute((ABool( i1 <= i2 ))::s, g, o, d)
+        (* Instead of using this implementation of tuple I could do it on this stack as well! Doint nothing to answers below, and if I don't have faulty opc *)
+        |( s, g, TUP(oll)::o, d) -> execute((Atuple( List.map (executeCurry execute [] g []) oll ))::s, g, o, d)
+        |((Atuple l)::s, g, PROJ(i)::o, d) -> execute( (List.nth l i)::s, g, o, d )
+        |(s, g, CLOSURE(x, ol)::o, d) -> execute( (AClosure(g,x,ol)::s, g, o, d) )
+        |(a::AClosure(g', x, ol)::s, g, APPLY::o, d) -> execute([], (x,a)::g, ol, (s, g, o)::d)
+        (* Could have declared type state = State of a*b*c but why/why not to introduce constructor ? *)
+        |(a::s', g'', RET::c'', (s, g, o)::d) -> execute(a::s, g, o, d)
+        
+
+
+
+        
 
 
