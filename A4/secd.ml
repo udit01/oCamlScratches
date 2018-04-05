@@ -56,7 +56,7 @@ type exp =   true | false
             | Apply of exp * exp 
             (* Let x = e1 in e2
             Def d1 in d2
-            Lambda, Apply
+            If then else
             Sequential, Parallel definitions 
             Local scoping rules?  *)
 and lambda = Lambda of variable * exp
@@ -206,7 +206,7 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         |(a::AClosure(g', x, ol)::s, g, APPLY::o, d) -> execute([], (x,a)::g, ol, (s, g, o)::d)
         (* Could have declared type state = State of a*b*c but why/why not to introduce constructor ? *)
         |(a::s', g'', RET::c'', (s, g, o)::d) -> execute(a::s, g, o, d)
-        
+
 
 
 
