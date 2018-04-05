@@ -54,10 +54,10 @@ type exp =   true | false
             | Proj of int * (exp)
             | L of lambda
             | Apply of exp * exp
-            | Let of variable * exp * exp 
-            (* Let x = e1 in e2 ^^ *)
             | Ifte of exp * exp * exp
             (* If e1 then e2 else e3 ^^ *)
+            | Let of variable * exp * exp 
+            (* Let x = e1 in e2 ^^ *)
             (* 
             Def d1 in d2
             Sequential, Parallel definitions 
@@ -98,10 +98,15 @@ type opcode = TRUE
             | GTE
             | LTE
             | PROJ of int
-            | TUP of ((opcode list) list)
+            | TUP of (int)
             | CLOSURE of variable * (opcode list)
             | RET
             | APPLY
+            | IF 
+            | THELSE of (opcode list) * (opcode list)
+            | BIND of variable
+            | UNBIND of variable
+
 
 (* type opcode =  *)
 exception NotATuple
@@ -137,6 +142,7 @@ let rec compile e = match e with
         | Proj (i,_) -> raise NotATuple
         | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e)@[RET])]
         | Apply (e1, e2) -> compile(e1) @ compile(e2) @ [APPLY]
+        | Let (x, e1, e2) -> compile(e1) @ [BIND(x)] @ compile(e2) @[UNBIND(x)]
       ;;
         
 (* 
@@ -204,12 +210,19 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         |((AInt i1)::(AInt i2)::s, g, GTE::o, d) -> execute((ABool( i1 >= i2 ))::s, g, o, d)
         |((AInt i1)::(AInt i2)::s, g, LTE::o, d) -> execute((ABool( i1 <= i2 ))::s, g, o, d)
         (* Instead of using this implementation of tuple I could do it on this stack as well! Doint nothing to answers below, and if I don't have faulty opc *)
-        |( s, g, TUP(oll)::o, d) -> execute((Atuple( List.map (executeCurry execute [] g []) oll ))::s, g, o, d)
+        |( s, g, TUP(k)::o, d) -> execute((Atuple( takeOutFirstN s k ))::(afterN s k), g, o, d)
         |((Atuple l)::s, g, PROJ(i)::o, d) -> execute( (List.nth l i)::s, g, o, d )
         |(s, g, CLOSURE(x, ol)::o, d) -> execute( (VCLosure(g,x,ol)::s, g, o, d) )
         |(a::VCLosure(g', x, ol)::s, g, APPLY::o, d) -> execute([], (x,a)::g, ol, (s, g, o)::d)
         (* Could have declared type state = State of a*b*c but why/why not to introduce constructor ? *)
         |(a::s', g'', RET::c'', (s, g, o)::d) -> execute(a::s, g, o, d)
+        |(s, g, IF::o, d) -> execute(s, g, o, d)
+        |((ABool true)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol1@o, d)
+        |((ABool false)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol2l1@o, d)
+        |(a::s, g, BIND(x)::o, d ) -> execute(s, (x,a)::g, o, d)
+        |(s, g, UNBIND(x)::o, d )-> execute(s, remFirstOcc g x, o, d)
+
+        
 
 
 
