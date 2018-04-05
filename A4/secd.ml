@@ -62,6 +62,7 @@ type exp =   true | false
 and lambda = Lambda of variable * exp
 
 (* Answer of type value closure  *)
+(* No diffrence between Closure and ValueClosure for SECD machine? *)
 type ans = AInt of int | ABool of bool | Atuple of (ans list) | VClosure of table * lambda
   and table = (variable * ans) list;;
 
