@@ -66,8 +66,7 @@ and lambda = Lambda of variable * exp
 type ans = AInt of int 
           | ABool of bool 
           | Atuple of (ans list) 
-          (* | VClosure of table * lambda  *)
-          | AClosure of table * variable * (opcode list)
+          | VCLosure of table * variable * (opcode list)
   and table = (variable * ans) list;;
 
 type state = (ans list) * (table) * (opcode list)
@@ -202,8 +201,8 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         (* Instead of using this implementation of tuple I could do it on this stack as well! Doint nothing to answers below, and if I don't have faulty opc *)
         |( s, g, TUP(oll)::o, d) -> execute((Atuple( List.map (executeCurry execute [] g []) oll ))::s, g, o, d)
         |((Atuple l)::s, g, PROJ(i)::o, d) -> execute( (List.nth l i)::s, g, o, d )
-        |(s, g, CLOSURE(x, ol)::o, d) -> execute( (AClosure(g,x,ol)::s, g, o, d) )
-        |(a::AClosure(g', x, ol)::s, g, APPLY::o, d) -> execute([], (x,a)::g, ol, (s, g, o)::d)
+        |(s, g, CLOSURE(x, ol)::o, d) -> execute( (VCLosure(g,x,ol)::s, g, o, d) )
+        |(a::VCLosure(g', x, ol)::s, g, APPLY::o, d) -> execute([], (x,a)::g, ol, (s, g, o)::d)
         (* Could have declared type state = State of a*b*c but why/why not to introduce constructor ? *)
         |(a::s', g'', RET::c'', (s, g, o)::d) -> execute(a::s, g, o, d)
 
