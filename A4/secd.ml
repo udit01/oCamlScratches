@@ -150,11 +150,30 @@ and table = (variable * closure) list ;; *)
 exception RuntimeError
 
 (* Output of SECD is answer or full state ? *)
-let rec execute (stack, gamma, opcodes, dump) = 
+let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump) = 
         match (stack, gamma, opcode, dump) with
         (a::s, g, [], d) -> a
         |(s, g, TRUE::o, d) -> execute ((ABool true)::s, g, o, d) 
         |(s, g, FALSE::o, d) -> execute ((ABool false)::s, g, o, d)
-        | 
+        |(s, g, LOOKUP(v)::o, d) -> execute((lookup g v)::s, g, o, d)
+        |((Abool b)::s, g, NOT::o, d) -> execute((Abool (not b))::s, g, o, d)
+        |((Abool b1)::(Abool b2)::s, g, OR::o, d) -> execute((Abool (b1 || b2))::s, g, o, d)
+        |((Abool b1)::(Abool b2)::s, g, AND::o, d) -> execute((Abool (b1 && b2))::s, g, o, d)
+        |((Abool b1)::(Abool b2)::s, g, XOR::o, d) -> execute((Abool (
+                                                      match (b1, b2) with 
+                                                          (true,true)   -> false
+                                                          |(true,false)  -> true
+                                                          |(false,true)  -> true
+                                                          |(false,false) -> false
+                                                        ))::s, g, o, d)
+        |((Abool b1)::(Abool b2)::s, g, IMPL::o, d) -> execute((Abool (
+                                                      match (b1, b2) with 
+                                                          (true,true)   -> true
+                                                          |(true,false)  -> false
+                                                          |(false,true)  -> true
+                                                          |(false,false) -> true
+                                                        ))::s, g, o, d)                                                        
+        |((Abool b1)::(Abool b2)::s, g, (CONST n)::o, d) -> execute((AInt n), g, o, d)
+        |
 
 
