@@ -67,13 +67,6 @@ and lambda = Lambda of variable * exp
 
 (* Answer of type value closure  *)
 (* No diffrence between Closure and ValueClosure for SECD machine? *)
-type ans = AInt of int 
-          | ABool of bool 
-          | Atuple of (ans list) 
-          | VCLosure of table * variable * (opcode list)
-  and table = (variable * ans) list;;
-
-type state = (ans list) * (table) * (opcode list)
 
 type opcode = TRUE 
             | FALSE 
@@ -111,6 +104,14 @@ type opcode = TRUE
             | MAP of variable * (opcode list)
             | BINDRET
 
+type ans = AInt of int 
+          | ABool of bool 
+          | Atuple of (ans list) 
+          | VCLosure of table * variable * (opcode list)
+  and table = (variable * ans) list;;
+
+type state = (ans list) * (table) * (opcode list)
+
 
 (* type opcode =  *)
 exception NotATuple
@@ -135,12 +136,12 @@ let rec compile e = match e with
         | Pow (e1,e2) ->  (compile e1) @ (compile e2) @ [POW]
         | Max (e1,e2) ->  (compile e1) @ (compile e2) @ [MAX]
         | Min (e1,e2) ->  (compile e1) @ (compile e2) @ [MIN]
-        | EQL (e1,e2) -> (compile e1) @ (compile e2) @ [EQL]
+        | Eql (e1,e2) -> (compile e1) @ (compile e2) @ [EQL]
         | Gt (e1,e2) -> (compile e1) @ (compile e2) @ [GT]
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
-        | Tuple l -> [List.concat (List.map compile l)] @ [TUP(List.length l)] 
+        | Tuple l -> [List.concat (List.map compile l)] @ [ TUP (List.length l)] 
         | Proj (i,e) -> (compile e) @[PROJ(i)]
         (* Could also have compiled only i'th of the tuple *)
         (* | Proj(i, Tuple l) -> compile (List.nth l i) *)
@@ -203,7 +204,7 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
                                                         ))::s, g, o, d)                                                        
         |(s, g, (CONST n)::o, d) -> execute((AInt n)::s, g, o, d)
         |((AInt i)::s, g, ABS::o, d) -> execute((Aint (abs i))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, MOD::o, d) -> execute((AInt(mod i1 i2))::s, g, o, d)
+        |((AInt i1)::(AInt i2)::s, g, MOD::o, d) -> execute((AInt( i1 mod i2 ))::s , g, o, d)
         |((AInt i1)::(AInt i2)::s, g, ADD::o, d) -> execute((AInt(i1 + i2))::s, g, o, d)
         |((AInt i1)::(AInt i2)::s, g, SUB::o, d) -> execute((AInt(i1 - i2))::s, g, o, d)
         |((AInt i1)::(AInt i2)::s, g, MUL::o, d) -> execute((AInt(i1 * i2))::s, g, o, d)
