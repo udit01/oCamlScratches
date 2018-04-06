@@ -60,7 +60,8 @@ type exp =  true | false
             (* If e1 then e2 else e3 ^^ *)
             | Let of variable * exp * exp 
             (* Let x = e1 in e2 ^^ *)
-            | Def of ((variable*exp) list)
+            | Def of ((variable*exp) list)\
+            | A of answer
 (* Answer of type value closure  *)
 
 (* 
@@ -98,7 +99,8 @@ exception MalformedExp
 let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
 (* base case ? *)
           (Null, stack) -> raise NullClosure
-        | ( Cl (gamma , true ) , [] ) -> VClosure(gamma,true)
+        | ( Cl (gamma , true ) , [] ) -> VClosure(gamma,true) 
+        (* Change to A (ABool true) ^ if required *)
         | ( Cl (gamma , false) , [] ) -> VClosure(gamma,false)
         | ( Cl (gamma , C i  ) , [] ) -> VClosure(gamma, C i)  
         | ( Cl (gamma , V v  ) , stack ) -> execute ( lookup gamma v , stack ) 
@@ -121,9 +123,11 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | ( Cl (gamma , C i2 ) , MOD__(C i1)::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
 
 
-        | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, Atuple(1, [hd] )) , ( Tuple(n-1, tl)::stack  )         
-        | ( Cl (gamma , Atuple(m, al) ) , Tuple(k, hd::tl)::stack) -> execute( Cl(gamma, ATuple(m+1, (eval hd)::al ) ) , ( Tuple(k-1, tl)::stack ) )         
-        | ( Cl (gamma , C i2 ) , MOD__(C i1)::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
+        | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, hd ) , ( ProcTuple(n-1, tl,0 , [])::stack  )         
+        | ( Cl (gamma , A a ) , ProcTuple( 0, [],  0, [])::stack) ->          
+        | ( Cl (gamma , A a ) , ProcTuple( k, l ,  0, [])::stack) ->          
+        | ( Cl (gamma , A a ) , ProcTuple( m, l1,  n, l2)::stack) ->          
+        | ( Cl (gamma , A a ) , ProcTuple( 0, [],  k, l)::stack) ->          
         
         
 
