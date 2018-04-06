@@ -31,15 +31,15 @@ type exp =  true | false
             | V of variable (*variable is arbitary you could change this and gamma*)
             | Lambda of variable * exp
             | Apply of exp * exp
-            
-            (* LOCAL DEFINITIONS 
+            (* | V of variable variable is arbitary you could change this and gamma *)
             | Not of exp
             | Or of exp*exp
             | And of exp*exp
             | Xor of exp*exp
             | Impl of exp*exp
-            | Const of int 
-            | Mod of exp
+            (* | Const of int  *)
+            | Mod of exp*exp
+            | Abs of exp
             | Add of exp*exp       
             | Sub of exp*exp       
             | Mul of exp*exp       
@@ -47,14 +47,20 @@ type exp =  true | false
             | Pow of exp*exp
             | Max of exp*exp
             | Min of exp*exp
-            | EqI of exp*exp
+            | Eql of exp*exp
             | Gt of exp*exp
             | Lt of exp*exp
             | Gte of exp*exp
             | Lte of exp*exp
             | Tuple of (exp list)
-            | Proj of int * (exp) *)
-
+            | Proj of int * (exp)
+            (* | L of lambda *)
+            (* | Apply of exp * exp *)
+            | Ifte of exp * exp * exp
+            (* If e1 then e2 else e3 ^^ *)
+            | Let of variable * exp * exp 
+            (* Let x = e1 in e2 ^^ *)
+            | Def of ((variable*exp) list)
 (* Answer of type value closure  *)
 
 (* 
@@ -70,11 +76,14 @@ type closure = Cl of table * exp
 and table = variable -> closure ;; *)
 
 
-type closure = Null |  Cl of table * exp
+type closure = Null |  Cl of table * exp | VClosure of table * answer 
 and table = (variable * closure) list ;;
 
-type answer = VClosure of table * exp 
-              (* | Tuple of answer list etc *)
+type answer = ABool of bool
+              | AInt of int
+              | Atup of int*answer
+
+(* VClosure of table * exp  *)
 
 let rec lookup (gamma:table) ((Var s):variable) : closure = match gamma with
       [] -> Null 
@@ -89,11 +98,33 @@ exception MalformedExp
 let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
 (* base case ? *)
           (Null, stack) -> raise NullClosure
-        | ( Cl (gamma , true ) , stack ) -> VClosure(gamma,true)
-        | ( Cl (gamma , false) , stack ) -> VClosure(gamma,false)
-        | ( Cl (gamma , C i  ) , stack ) -> VClosure(gamma, C i)  
+        | ( Cl (gamma , true ) , [] ) -> VClosure(gamma,true)
+        | ( Cl (gamma , false) , [] ) -> VClosure(gamma,false)
+        | ( Cl (gamma , C i  ) , [] ) -> VClosure(gamma, C i)  
         | ( Cl (gamma , V v  ) , stack ) -> execute ( lookup gamma v , stack ) 
         | ( Cl (gamma', Lambda(v, exp')) , (Cl(gamma,exp))::stack ) -> execute ( Cl ( (v, Cl(gamma,exp))::gamma' ,  exp' ) , stack ) 
         (* | ( Cl (gamma', Lambda(v, exp')) , [] ) -> raise ExpectedClosureOnStack *)
         | ( Cl (gamma , Apply(exp1,exp2)) , stack) -> execute( Cl(gamma,exp1) , (Cl(gamma,exp2))::stack  ) 
+        | ( Cl (gamma , Not(e)) , stack) -> execute( Cl(gamma,e) , ((NOT_)::stack  ) 
+        | ( Cl (gamma , true ) , NOT_::stack) -> execute( Cl(gamma, false) , (stack) ) 
+        | ( Cl (gamma , false ) , NOT_::stack) -> execute( Cl(gamma, true) , (stack) ) 
+        | ( Cl (gamma , Or(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OR_(e2)::stack  )         
+        | ( Cl (gamma , true ) , OR_(e2)::stack) -> execute( Cl(gamma, true ) , ( stack ) )         
+        | ( Cl (gamma , false ) , OR_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )
+        | ( Cl (gamma , And(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( AND_(e2)::stack  )         
+        | ( Cl (gamma , true ) , AND_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )         
+        | ( Cl (gamma , false ) , OR_(e2)::stack) -> execute( Cl(gamma, false ) , ( stack ) )   
+
+
+        | ( Cl (gamma , Mod(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( MOD_(e2)::stack  )         
+        | ( Cl (gamma , C i1 ) , MOD_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( MOD__(C i1)::stack ) )         
+        | ( Cl (gamma , C i2 ) , MOD__(C i1)::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
+
+
+        | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, Atuple(1, [hd] )) , ( Tuple(n-1, tl)::stack  )         
+        | ( Cl (gamma , Atuple(m, al) ) , Tuple(k, hd::tl)::stack) -> execute( Cl(gamma, ATuple(m+1, (eval hd)::al ) ) , ( Tuple(k-1, tl)::stack ) )         
+        | ( Cl (gamma , C i2 ) , MOD__(C i1)::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
+        
+        
+
         | _ -> raise MalformedExp
