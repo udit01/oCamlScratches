@@ -58,6 +58,7 @@ type exp =   true | false
             (* If e1 then e2 else e3 ^^ *)
             | Let of variable * exp * exp 
             (* Let x = e1 in e2 ^^ *)
+            | Def of ((variable*exp) list)
             (* 
             Def d1 in d2
             Sequential, Parallel definitions 
@@ -97,8 +98,8 @@ type opcode = TRUE
             | LT
             | GTE
             | LTE
-            | PROJ of int
             | TUP of (int)
+            | PROJ of int
             | CLOSURE of variable * (opcode list)
             | RET
             | APPLY
@@ -106,10 +107,14 @@ type opcode = TRUE
             | THELSE of (opcode list) * (opcode list)
             | BIND of variable
             | UNBIND of variable
+            | DEF of int 
+            | MAP of variable * (opcode list)
+            | BINDRET
 
 
 (* type opcode =  *)
 exception NotATuple
+let mapCurry compile map (var, exp) = map(var, compile exp)
 
 let rec compile e = match e with
         true ->  [TRUE]
@@ -135,14 +140,15 @@ let rec compile e = match e with
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
-        | Tuple l -> [TUP (List.map compile l)] 
-        | Proj (i,Tuple l) -> [TUP(List.map compile l)] @ [PROJ(i)]
+        | Tuple l -> [List.concat (List.map compile l)] @ [TUP(List.length l)] 
+        | Proj (i,e) -> (compile e) @[PROJ(i)]
         (* Could also have compiled only i'th of the tuple *)
         (* | Proj(i, Tuple l) -> compile (List.nth l i) *)
         | Proj (i,_) -> raise NotATuple
         | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e)@[RET])]
         | Apply (e1, e2) -> compile(e1) @ compile(e2) @ [APPLY]
         | Let (x, e1, e2) -> compile(e1) @ [BIND(x)] @ compile(e2) @[UNBIND(x)]
+        | Def(l) -> [DEF(List.length l)] @ (List.map (mapCurry compile MAP) l)
       ;;
         
 (* 
@@ -167,6 +173,7 @@ let lookup (t:table) (v:variable) : ans =
 
 (* When a tuple forms do we have to evaluate all projections even if only 1 of them is required ? *)
 exception RuntimeError
+exception TypeMismatch
 let executeCurry execute stack gamma dump opcodelist = execute (stack,gamma,opcodelist,dump)
 (* Output of SECD is answer or full state ? *)
 let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump) = 
@@ -221,12 +228,8 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         |((ABool false)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol2l1@o, d)
         |(a::s, g, BIND(x)::o, d ) -> execute(s, (x,a)::g, o, d)
         |(s, g, UNBIND(x)::o, d )-> execute(s, remFirstOcc g x, o, d)
-
-        
-
-
-
-
-        
-
+        |(s, g, DEF(1)::MAP(v,ol)::o, d) -> execute([],[],ol@[BINDRET],(s, g, BIND(v)::o)::d)
+        |(s, g, DEF(n)::MAP(v,ol)::o, d) -> execute([],[],ol@[BINDRET],(s, g, BIND(v)::DEF(n-1)::o)::d)
+        |(a::s', g', BINDRET::o', (s, g, BIND(v)::DEF(n)::o)::d ) -> (s, (v,a)::g, DEF(n)::o, d)
+        | _ -> raise TypeMismatch
 
