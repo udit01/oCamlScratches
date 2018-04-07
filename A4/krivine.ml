@@ -216,7 +216,7 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | ( Cl (gamma, Let(v, e1, e2)) , stack ) -> execute( Cl (gamma, e1) , LET_(v, e3)::stack )
         | ( Cl (gamma, a ) , LET_(v, e2)::stack ) -> execute( Cl ((v, Cl(gamma,a))::gamma, e2) , stack )
         
-        | ( Cl (gamma, Def(vcll)) , stack) -> execute ( Cl(vcll@gamma,  ), stack )
+        | ( Cl (gamma, Def(vcll)) , stack) -> execute ( Cl(vcll@gamma, Null ), stack )
 
         | _ -> raise MalformedExp
 
