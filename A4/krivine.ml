@@ -228,3 +228,11 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | _ -> raise MalformedExp
 
 (* For Tuples or anything, make a tuple of closures, because the unit is NOT exp, it's closures *)
+
+ (* let e1 = Apply( (Lambda(Var "x" , ADD(V (Var "x"),C(3)))) , C(7) ) ;;
+execute( [], [], (compile e1) , [] );;
+ let e2 = Ifte(true, e1, C(5));;
+execute( [], [], (compile e2) , [] );;
+ let e3 = Let( Var "y" , e2, Mul(V (Var "y"),C(2) ) );;
+execute( [], [], (compile e3) , [] );;
+  *)

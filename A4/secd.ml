@@ -259,5 +259,10 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         | _ -> raise TypeMismatch
         ;;
 
-
-
+ let e1 = Apply( L (Lambda(Var "x" , Add(V (Var "x"),Const(3)))) , Const(7) ) ;;
+execute( [], [], (compile e1) , [] );;
+ let e2 = Ifte(true, e1, Const(5));;
+execute( [], [], (compile e2) , [] );;
+ let e3 = Let( Var "y" , e2, Mul(V (Var "y"),Const(2) ) );;
+execute( [], [], (compile e3) , [] );;
+ 
