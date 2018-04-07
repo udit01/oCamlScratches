@@ -26,39 +26,47 @@ Most importantly, you need to provide inputs that demonstrate that your implemen
 (* EXAMPLES ARE PROVIDES AT THE END *)
 type variable = Var of string 
 
-type exp =  true | false
+
+type answer = ABool of bool
+              | AInt of int
+              | Atup of int * (answer list)
+(* VClosure of table * exp  *)
+
+
+type exp =  NExp
+            (* |true | false *)
+            | B of bool
             | C of int (*Const of int*)
             | V of variable (*variable is arbitary you could change this and gamma*)
             | Lambda of variable * exp
             | Apply of exp * exp
             (* | V of variable variable is arbitary you could change this and gamma *)
-            | NOT of exp
-            | OR of exp*exp
-            | AND of exp*exp
-            | XOR of exp*exp
-            | IMPL of exp*exp
-            (* | Const of int  *)
-            | MOD of exp*exp
-            | ABS of exp
-            | ADD of exp*exp       
-            | SUB of exp*exp       
-            | MUL of exp*exp       
-            | DIV of exp*exp       
-            | POW of exp*exp
-            | MAX of exp*exp
-            | MIN of exp*exp
-            | EQL of exp*exp
-            | GT of exp*exp
-            | LT of exp*exp
-            | GTE of exp*exp
-            | LTE of exp*exp
-            | Tuple of int*(exp list)
+            | NOT of exp| NOT_
+            | OR of exp*exp  | OR_ of exp
+            | AND of exp*exp | AND_ of exp 
+            | XOR of exp*exp | XOR_ of exp | XOR__ of answer
+            | IMPL of exp*exp | IMPL_ of exp | IMPL__ of answer
+            | MOD of exp*exp | MOD_ of exp | MOD__ of answer
+            | ABS of exp | ABS_ 
+            | ADD of exp*exp | ADD_ of exp | ADD__ of answer       
+            | SUB of exp*exp | SUB_ of exp | SUB__ of answer       
+            | MUL of exp*exp | MUL_ of exp | MUL__ of answer       
+            | DIV of exp*exp | DIV_ of exp | DIV__ of answer       
+            | POW of exp*exp | POW_ of exp | POW__ of answer
+            | MAX of exp*exp | MAX_ of exp | MAX__ of answer
+            | MIN of exp*exp | MIN_ of exp | MIN__ of answer
+            | EQL of exp*exp | EQL_ of exp | EQL__ of answer
+            | GT of exp*exp | GT_ of exp | GT__ of answer
+            | LT of exp*exp | LT_ of exp | LT__ of answer
+            | GTE of exp*exp | GTE_ of exp | GTE__ of answer
+            | LTE of exp*exp | LTE_ of exp | LTE__ of answer
+            | Tuple of int*(exp list) | TUPLE_ of int*(answer list) | PROCTUPLE of int * (exp list) * int * (answer list)
             | Proj of int * (exp)
             (* | L of lambda *)
             (* | Apply of exp * exp *)
-            | Ifte of exp * exp * exp
+            | Ifte of exp * exp * exp | IFTE_ of exp * exp
             (* If e1 then e2 else e3 ^^ *)
-            | Let of variable * exp * exp 
+            | Let of variable * exp * exp | LET_ of variable * exp
             (* Let x = e1 in e2 ^^ *)
             | Def of ((variable * closure) list)
             (* | A of answer *)
@@ -77,14 +85,8 @@ type closure = Cl of table * exp
 AND table = variable -> closure ;; *)
 
 
-and closure = Null |  Cl of table * exp | VClosure of table * answer 
+and closure = Null |  Cl of table * exp | VClosure of table * answer | OPCl of exp
 and table = (variable * closure) list ;;
-
-type answer = ABool of bool
-              | AInt of int
-              | Atup of int*answer
-
-(* VClosure of table * exp  *)
 
 let rec lookup (gamma:table) ((Var s):variable) : closure = match gamma with
       [] -> Null 
@@ -99,11 +101,11 @@ exception MalformedExp
 let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
 (* base case ? *)
           (Null, stack) -> raise NullClosure
-        | ( Cl (gamma , true ) , [] ) -> VClosure(gamma, ABool true) 
+        | ( Cl (gamma , B true ) , [] ) -> VClosure(gamma, ABool true) 
         (* Change to A (ABool true) ^ if required *)
-        | ( Cl (gamma , false) , [] ) -> VClosure(gamma, ABool false)
+        | ( Cl (gamma , B false) , [] ) -> VClosure(gamma, ABool false)
         | ( Cl (gamma , C i  ) , [] ) -> VClosure(gamma, AInt i)  
-        | ( Cl (gamma , TUPLE_(i,cll)), [] ) -> VClosure(gamma, Atup(i,cll))
+        | ( Cl (gamma , TUPLE_(i,al)), [] ) -> VClosure(gamma, Atup(i,al))
         
         (* 
         | ( Cl (gamma , A (ABool true) ) , [] ) -> VClosure(gamma,ABool true) 
@@ -118,105 +120,110 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         (* | ( Cl (gamma', Lambda(v, exp')) , [] ) -> raise ExpectedClosureOnStack *)
         | ( Cl (gamma , Apply(exp1,exp2)) , stack) -> execute( Cl(gamma,exp1) , (Cl(gamma,exp2))::stack  ) 
 
-        | ( Cl (gamma , NOT(e)) , stack) -> execute( Cl(gamma,e) , ((NOT_)::stack  ) 
-        | ( Cl (gamma , true ) , NOT_::stack) -> execute( Cl(gamma, false) , (stack) ) 
-        | ( Cl (gamma , false ) , NOT_::stack) -> execute( Cl(gamma, true) , (stack) ) 
+        | ( Cl (gamma , NOT(e)) , stack) -> execute( Cl(gamma,e) , ((OPCl(NOT_))::stack  )) 
+        | ( Cl (gamma , B true ) , OPCl(NOT_)::stack) -> execute( Cl(gamma, B false) , (stack) ) 
+        | ( Cl (gamma , B false ) , OPCl(NOT_)::stack) -> execute( Cl(gamma, B true) , (stack) ) 
 
-        | ( Cl (gamma , OR(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OR_(e2)::stack  )         
-        | ( Cl (gamma , true ) , OR_(e2)::stack) -> execute( Cl(gamma, true ) , ( stack ) )         
-        | ( Cl (gamma , false ) , OR_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )
+        | ( Cl (gamma , OR(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(OR_(e2))::stack  ))         
+        | ( Cl (gamma , B true ) , OPCl(OR_(e2))::stack) -> execute( Cl(gamma, B true ) , ( stack ) )         
+        | ( Cl (gamma , B false ) , OPCl(OR_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )
 
-        | ( Cl (gamma , AND(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( AND_(e2)::stack  )         
-        | ( Cl (gamma , true ) , AND_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )         
-        | ( Cl (gamma , false ), AND_(e2)::stack) -> execute( Cl(gamma, false ) , ( stack ) )   
+        | ( Cl (gamma , AND(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(AND_(e2))::stack  ))         
+        | ( Cl (gamma , B true ) , OPCl(AND_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( stack ) )         
+        | ( Cl (gamma , B false ), OPCl(AND_(e2))::stack) -> execute( Cl(gamma, B false ) , ( stack ) )   
 
-        | ( Cl (gamma , XOR(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( XOR_(e2)::stack  )         
-        | ( Cl (gamma , true ) , XOR_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( XOR__(ABool true )::stack ) )         
-        | ( Cl (gamma , false ), XOR_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( XOR__(ABool false)::stack ) )
-        | ( Cl (gamma , true ) , XOR__(ABool true )::stack) -> execute( Cl(gamma, false) , (stack) )         
-        | ( Cl (gamma , true ) , XOR__(ABool false)::stack) -> execute( Cl(gamma, true ) , (stack) )         
-        | ( Cl (gamma , false) , XOR__(ABool true )::stack) -> execute( Cl(gamma, true ) , (stack) )         
-        | ( Cl (gamma , false) , XOR__(ABool false)::stack) -> execute( Cl(gamma, false) , (stack) )         
+        | ( Cl (gamma , XOR(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(XOR_(e2))::stack  ))         
+        | ( Cl (gamma , B true ) , OPCl(XOR_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(XOR__(ABool true ))::stack ) )         
+        | ( Cl (gamma , B false ), OPCl(XOR_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(XOR__(ABool false))::stack ) )
+        | ( Cl (gamma , B true ) , OPCl(XOR__(ABool true ))::stack) -> execute( Cl(gamma, B false) , (stack) )         
+        | ( Cl (gamma , B true ) , OPCl(XOR__(ABool false))::stack) -> execute( Cl(gamma, B true ) , (stack) )         
+        | ( Cl (gamma , B false) , OPCl(XOR__(ABool true ))::stack) -> execute( Cl(gamma, B true ) , (stack) )         
+        | ( Cl (gamma , B false) , OPCl(XOR__(ABool false))::stack) -> execute( Cl(gamma, B false) , (stack) )         
 
-        | ( Cl (gamma , IMPL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( IMPL_(e2)::stack  )         
-        | ( Cl (gamma , true ) , IMPL_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( IMPL__(ABool true )::stack ) )         
-        | ( Cl (gamma , false ), IMPL_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( IMPL__(ABool false)::stack ) )
-        | ( Cl (gamma , true ) , IMPL__(ABool true )::stack) -> execute( Cl(gamma, true ) , (stack) )         
-        | ( Cl (gamma , true ) , IMPL__(ABool false)::stack) -> execute( Cl(gamma, true ) , (stack) )         
-        | ( Cl (gamma , false) , IMPL__(ABool true )::stack) -> execute( Cl(gamma, false) , (stack) ) (*Because the one already on the stack was a1*)         
-        | ( Cl (gamma , false) , IMPL__(ABool false)::stack) -> execute( Cl(gamma, true ) , (stack) )         
+        | ( Cl (gamma , IMPL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(IMPL_(e2))::stack  ))         
+        | ( Cl (gamma , B true ) , OPCl(IMPL_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(IMPL__(ABool true ))::stack ) )         
+        | ( Cl (gamma , B false ), OPCl(IMPL_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(IMPL__(ABool false))::stack ) )
+        | ( Cl (gamma , B true ) , OPCl(IMPL__(ABool true ))::stack) -> execute( Cl(gamma, B true ) , (stack) )         
+        | ( Cl (gamma , B true ) , OPCl(IMPL__(ABool false))::stack) -> execute( Cl(gamma, B true ) , (stack) )         
+        | ( Cl (gamma , B false) , OPCl(IMPL__(ABool true ))::stack) -> execute( Cl(gamma, B false) , (stack) ) (*Because the one already on the stack was a1*)         
+        | ( Cl (gamma , B false) , OPCl(IMPL__(ABool false))::stack) -> execute( Cl(gamma, B true ) , (stack) )         
 
-        | ( Cl (gamma , MOD(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( MOD_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , MOD_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( MOD__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , MOD__(C i1)::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
+        | ( Cl (gamma , MOD(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(MOD_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(MOD_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(MOD__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(MOD__(AInt i1))::stack) -> execute( Cl(gamma, C (i1 mod i2) ) , (stack ) )
 
-        | ( Cl (gamma , ABS(e)) , stack) -> execute( Cl(gamma,e) , ((ABS_)::stack  ) 
-        | ( Cl (gamma , C i ) , ABS_::stack) -> execute( Cl(gamma, C (abs i)) , (stack) ) 
+        | ( Cl (gamma , ABS(e)) , stack) -> execute( Cl(gamma,e) , ((OPCl(ABS_))::stack  )) 
+        | ( Cl (gamma , C i ) , OPCl(ABS_)::stack) -> execute( Cl(gamma, C (abs i)) , (stack) ) 
 
-        | ( Cl (gamma , ADD(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( ADD_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , ADD_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( ADD__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , ADD__(C i1)::stack) -> execute( Cl(gamma, C (i1 + i2) ) , (stack ) )
+        | ( Cl (gamma , ADD(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(ADD_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(ADD_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(ADD__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(ADD__(AInt i1))::stack) -> execute( Cl(gamma, C (i1 + i2) ) , (stack ) )
 
-        | ( Cl (gamma , SUB(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( SUB_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , SUB_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( SUB__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , SUB__(C i1)::stack) -> execute( Cl(gamma, C (i1 - i2) ) , (stack ) )
+        | ( Cl (gamma , SUB(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(SUB_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(SUB_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(SUB__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(SUB__(AInt i1))::stack) -> execute( Cl(gamma, C (i1 - i2) ) , (stack ) )
 
-        | ( Cl (gamma , MUL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( MUL_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , MUL_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( MUL__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , MUL__(C i1)::stack) -> execute( Cl(gamma, C (i1 * i2) ) , (stack ) )
+        | ( Cl (gamma , MUL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(MUL_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(MUL_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(MUL__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(MUL__(AInt i1))::stack) -> execute( Cl(gamma, C (i1 * i2) ) , (stack ) )
 
-        | ( Cl (gamma , DIV(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( DIV_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , DIV_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( DIV__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , DIV__(C i1)::stack) -> execute( Cl(gamma, C (i1 / i2) ) , (stack ) )
+        | ( Cl (gamma , DIV(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(DIV_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(DIV_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(DIV__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(DIV__(AInt i1))::stack) -> execute( Cl(gamma, C (i1 / i2) ) , (stack ) )
  
-        | ( Cl (gamma , POW(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( POW_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , POW_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( POW__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , POW__(C i1)::stack) -> execute( Cl(gamma, C (int_of_float(float_of_int(i1) ** float_of_int(i2))) ) , (stack ) )
+        | ( Cl (gamma , POW(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(POW_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(POW_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(POW__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(POW__(AInt i1))::stack) -> execute( Cl(gamma, C (int_of_float(float_of_int(i1) ** float_of_int(i2))) ) , (stack ) )
 
-        | ( Cl (gamma , MAX(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( MAX_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , MAX_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( MAX__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , MAX__(C i1)::stack) -> execute( Cl(gamma, C (max i1 i2) ) , (stack ) )
+        | ( Cl (gamma , MAX(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(MAX_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(MAX_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(MAX__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(MAX__(AInt i1))::stack) -> execute( Cl(gamma, C (max i1 i2) ) , (stack ) )
         
-        | ( Cl (gamma , MIN(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( MIN_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , MIN_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( MIN__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , MIN__(C i1)::stack) -> execute( Cl(gamma, C (min i1 i2) ) , (stack ) )
+        | ( Cl (gamma , MIN(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(MIN_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(MIN_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(MIN__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(MIN__(AInt i1))::stack) -> execute( Cl(gamma, C (min i1 i2) ) , (stack ) )
         
-        | ( Cl (gamma , EQL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( EQL_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , EQL_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( EQL__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , EQL__(C i1)::stack) -> execute( Cl(gamma, (i1 = i2) ) , (stack ) )
+        | ( Cl (gamma , EQL(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(EQL_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(EQL_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(EQL__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(EQL__(AInt i1))::stack) -> execute( Cl(gamma, B (i1 = i2) ) , (stack ) )
         
-        | ( Cl (gamma , GT(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( GT_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , GT_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( GT__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , GT__(C i1)::stack) -> execute( Cl(gamma, (i1 > i2) ) , (stack ) )
+        | ( Cl (gamma , GT(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(GT_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(GT_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(GT__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(GT__(AInt i1))::stack) -> execute( Cl(gamma, B (i1 > i2) ) , (stack ) )
         
-        | ( Cl (gamma , LT(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( LT_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , LT_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( LT__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , LT__(C i1)::stack) -> execute( Cl(gamma, C (i1 < i2) ) , (stack ) )
+        | ( Cl (gamma , LT(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(LT_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(LT_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(LT__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(LT__(AInt i1))::stack) -> execute( Cl(gamma, B (i1 < i2) ) , (stack ) )
         
-        | ( Cl (gamma , GTE(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( GTE_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , GTE_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( GTE__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , GTE__(C i1)::stack) -> execute( Cl(gamma, C (i1 >= i2) ) , (stack ) )
+        | ( Cl (gamma , GTE(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(GTE_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(GTE_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(GTE__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(GTE__(AInt i1))::stack) -> execute( Cl(gamma, B (i1 >= i2) ) , (stack ) )
         
-        | ( Cl (gamma , LTE(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( LTE_(e2)::stack  )         
-        | ( Cl (gamma , C i1 ) , LTE_(e2)::stack) -> execute( Cl(gamma, e2 ) , ( LTE__(C i1)::stack ) )         
-        | ( Cl (gamma , C i2 ) , LTE__(C i1)::stack) -> execute( Cl(gamma, C (i1 <= i2) ) , (stack ) )
+        | ( Cl (gamma , LTE(e1,e2)) , stack) -> execute( Cl(gamma,e1) , ( OPCl(LTE_(e2))::stack  ))         
+        | ( Cl (gamma , C i1 ) , OPCl(LTE_(e2))::stack) -> execute( Cl(gamma, e2 ) , ( OPCl(LTE__(AInt i1))::stack ) )         
+        | ( Cl (gamma , C i2 ) , OPCl(LTE__(AInt i1))::stack) -> execute( Cl(gamma, B (i1 <= i2) ) , (stack ) )
 
-        | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, hd ) , ( PROCTUPLE(n-1, tl, 0, [])::stack  )         
-        | ( Cl (gamma , a ) , PROCTUPLE( 0, [],  0, [])::stack) -> execute( Cl(gamma, TUPLE_(1, Cl(gamma, a))) , stack )         
-        | ( Cl (gamma , a ) , PROCTUPLE( 0, [],  k, l)::stack) ->  execute ( Cl(gamma, TUPLE_(k+1, Cl(gamma, a)::l)) , stack)        
-        | ( Cl (gamma , a ) , PROCTUPLE( k, h::t,  0, [])::stack) -> execute( Cl(gamma, h) , PROCTUPLE( k-1, h::t,  1, [Cl(gamma, a)] )::stack )         
-        | ( Cl (gamma , a ) , PROCTUPLE( m, h1::t1,  n, l2)::stack) -> execute( Cl(gamma, h1), PROCTUPLE(m-1, t1, n+1, Cl(gamma, a)::l2)::stack)  
-        (* I think last 2 cases can be unified *)
+        | ( Cl (gamma, Ifte(e1, e2, e3)) , stack ) -> execute( Cl (gamma, e1) , OPCl(IFTE_(e2, e3))::stack )
+        | ( Cl (gamma, B true ) , OPCl(IFTE_(e2, e3))::stack ) -> execute( Cl(gamma, e2) , stack )
+        | ( Cl (gamma, B false) , OPCl(IFTE_(e2, e3))::stack ) -> execute( Cl(gamma, e3) , stack )
+
+        | ( Cl (gamma, Let(v, e1, e2)) , stack ) -> execute( Cl (gamma, e1) , OPCl(LET_(v, e2))::stack )
+        | ( Cl (gamma, a ) , OPCl(LET_(v, e2))::stack ) -> execute( Cl ((v, Cl(gamma,a))::gamma, e2) , stack )
+
         | ( Cl (gamma, Proj(i, Tuple(n, l)) ) , stack ) -> execute( Cl(gamma, List.nth l i) , stack )
-
-        | ( Cl (gamma, Ifte(e1, e2, e3)) , stack ) -> execute( Cl (gamma, e1) , IFTE_(e2, e3)::stack )
-        | ( Cl (gamma, true ) , IFTE_(e2, e3)::stack ) -> execute( Cl(gamma, e2) , stack )
-        | ( Cl (gamma, false) , IFTE_(e2, e3)::stack ) -> execute( Cl(gamma, e3) , stack )
-
-        | ( Cl (gamma, Let(v, e1, e2)) , stack ) -> execute( Cl (gamma, e1) , LET_(v, e3)::stack )
-        | ( Cl (gamma, a ) , LET_(v, e2)::stack ) -> execute( Cl ((v, Cl(gamma,a))::gamma, e2) , stack )
+       
+        | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, hd ) , ( OPCl(PROCTUPLE(n-1, tl, 0, []))::stack  ))         
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( 0, []    ,  0, []))::stack) -> execute( Cl(gamma, TUPLE_(1, [ABool b])) , stack )         
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( 0, []    ,  0, []))::stack) -> execute( Cl(gamma, TUPLE_(1, [AInt i])) , stack )         
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, (ABool b)::l)) , stack)        
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, (AInt i)::l)) , stack)        
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, h::t,  1, [ABool b] ))::stack)         
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, h::t,  1, [AInt i] ))::stack)         
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, (ABool b)::l2))::stack)  
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, (AInt i)::l2))::stack)  
+        (* I think last 2 cases can be unified *)
         
-        | ( Cl (gamma, Def(vcll)) , stack) -> execute ( Cl(vcll@gamma, Null ), stack )
+        | ( Cl (gamma, Def(vcll)) , stack) -> execute ( Cl(vcll@gamma, NExp ), stack )
 
         | _ -> raise MalformedExp
 

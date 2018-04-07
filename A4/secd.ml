@@ -104,7 +104,8 @@ type opcode = TRUE
             | MAP of variable * (opcode list)
             | BINDRET
 
-type ans = AInt of int 
+type ans = N
+          | AInt of int 
           | ABool of bool 
           | Atuple of (ans list) 
           | VCLosure of table * variable * (opcode list)
@@ -115,7 +116,7 @@ type state = (ans list) * (table) * (opcode list)
 
 (* type opcode =  *)
 exception NotATuple
-let mapCurry compile map (var, exp) = map(var, compile exp)
+let mapCurry map compile (var, exp) = map(var, compile exp)
 
 let rec compile e = match e with
         true ->  [TRUE]
@@ -141,15 +142,21 @@ let rec compile e = match e with
         | Lt (e1,e2) -> (compile e1) @ (compile e2) @ [LT]
         | Gte (e1,e2) -> (compile e1) @ (compile e2) @ [GTE]
         | Lte (e1,e2) -> (compile e1) @ (compile e2) @ [LTE]
-        | Tuple l -> [List.concat (List.map compile l)] @ [ TUP (List.length l)] 
+        | Tuple l -> (List.concat (List.map compile l)) @ [ TUP (List.length l)] 
         | Proj (i,e) -> (compile e) @[PROJ(i)]
         (* Could also have compiled only i'th of the tuple *)
         (* | Proj(i, Tuple l) -> compile (List.nth l i) *)
-        | Proj (i,_) -> raise NotATuple
+        (* | Proj (i,_) -> raise NotATuple *)
         | L ( Lambda (v, e) ) -> [CLOSURE(v,compile(e)@[RET])]
         | Apply (e1, e2) -> compile(e1) @ compile(e2) @ [APPLY]
+        | Ifte(e1, e2, e3) -> [IF] @ (compile e1) @ [THELSE(compile e2, compile e3)]
         | Let (x, e1, e2) -> compile(e1) @ [BIND(x)] @ compile(e2) @[UNBIND(x)]
-        | Def(l) -> [DEF(List.length l)] @ (List.map (mapCurry compile MAP) l)
+        (* | Def(l) -> [DEF(List.length l)] @ (List.map (mapCurry MAP compile) l) *)
+        | Def(l) -> [DEF(List.length l)] @ ( let rec mapper l1 l2 = match l2 with 
+                                                [] -> l1
+                                             | (v, e)::tl -> mapper (MAP(v, compile e)::l1) (tl) 
+                                              in  
+                                              mapper [] l)
       ;;
         
 (* 
@@ -168,34 +175,51 @@ type closure = Cl of table * exp
 and table = (variable * closure) list ;; *)
 
 (* Correct the below function *)
-let lookup (t:table) (v:variable) : ans = 
-      AInt 1;;
+let rec lookup (t:table) (v:variable) : ans = match t with
+      [] -> N
+      | (v2, a)::tl -> if(v2 = v) then (a) else (lookup tl v)
+      ;;
 
+exception NotEnoughElems
+let rec takeOutFirstN l n = match l with
+      [] -> if (n = 0) then ([]) else (raise NotEnoughElems)
+      | hd::tl -> if(n = 0) then (hd::tl) else (takeOutFirstN tl (n-1))
 
+let rec afterN l n = match l with
+      [] -> if (n = 0) then ([]) else (raise NotEnoughElems)
+      | hd::tl -> if(n = 0) then (hd::tl) else (afterN tl (n-1))
+
+let rec remFirstOcc (g:table) (x:variable) = 
+    let rec rfo g x l =  match g with 
+      [] -> l
+      | (y, a)::tl -> if (y = x) then ( l@tl ) else (rfo tl x (l@[(y, a)]))
+       in
+      rfo g x [] 
+      ;;
 (* When a tuple forms do we have to evaluate all projections even if only 1 of them is required ? *)
 exception RuntimeError
 exception TypeMismatch
 let executeCurry execute stack gamma dump opcodelist = execute (stack,gamma,opcodelist,dump)
 (* Output of SECD is answer or full state ? *)
 let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump) = 
-        match (stack, gamma, opcode, dump) with
+        match (stack, gamma, opcodes, dump) with
         (a::s, g, [], d) -> a
         |(s, g, TRUE::o, d) -> execute ((ABool true)::s, g, o, d) 
         |(s, g, FALSE::o, d) -> execute ((ABool false)::s, g, o, d)
         |(s, g, LOOKUP(v)::o, d) -> execute((lookup g v)::s, g, o, d)
         (* |(s, g1@(v,a)@g2 , LOOKUP(v)::o, d) -> execute((a)::s, g, o, d) *)
         (* Is the above pattern matching allowed ? and if we have multiple then will it do it correctly ? ie pick the first one ? *)
-        |((Abool b)::s, g, NOT::o, d) -> execute((Abool (not b))::s, g, o, d)
-        |((Abool b1)::(Abool b2)::s, g, OR::o, d) -> execute((Abool (b1 || b2))::s, g, o, d)
-        |((Abool b1)::(Abool b2)::s, g, AND::o, d) -> execute((Abool (b1 && b2))::s, g, o, d)
-        |((Abool b1)::(Abool b2)::s, g, XOR::o, d) -> execute((Abool (
+        |((ABool b)::s, g, NOT::o, d) -> execute((ABool (not b))::s, g, o, d)
+        |((ABool b1)::(ABool b2)::s, g, OR::o, d) -> execute((ABool (b1 || b2))::s, g, o, d)
+        |((ABool b1)::(ABool b2)::s, g, AND::o, d) -> execute((ABool (b1 && b2))::s, g, o, d)
+        |((ABool b1)::(ABool b2)::s, g, XOR::o, d) -> execute((ABool (
                                                       match (b1, b2) with 
                                                           (true,true)   -> false
                                                           |(true,false)  -> true
                                                           |(false,true)  -> true
                                                           |(false,false) -> false
                                                         ))::s, g, o, d)
-        |((Abool b1)::(Abool b2)::s, g, IMPL::o, d) -> execute((Abool (
+        |((ABool b1)::(ABool b2)::s, g, IMPL::o, d) -> execute((ABool (
                                                       match (b1, b2) with 
                                                           (true,true)   -> true
                                                           |(true,false)  -> false
@@ -203,7 +227,7 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
                                                           |(false,false) -> true
                                                         ))::s, g, o, d)                                                        
         |(s, g, (CONST n)::o, d) -> execute((AInt n)::s, g, o, d)
-        |((AInt i)::s, g, ABS::o, d) -> execute((Aint (abs i))::s, g, o, d)
+        |((AInt i)::s, g, ABS::o, d) -> execute((AInt (abs i))::s, g, o, d)
         |((AInt i1)::(AInt i2)::s, g, MOD::o, d) -> execute((AInt( i1 mod i2 ))::s , g, o, d)
         |((AInt i1)::(AInt i2)::s, g, ADD::o, d) -> execute((AInt(i1 + i2))::s, g, o, d)
         |((AInt i1)::(AInt i2)::s, g, SUB::o, d) -> execute((AInt(i1 - i2))::s, g, o, d)
@@ -226,13 +250,14 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         |(a::s', g'', RET::c'', (s, g, o)::d) -> execute(a::s, g, o, d)
         |(s, g, IF::o, d) -> execute(s, g, o, d)
         |((ABool true)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol1@o, d)
-        |((ABool false)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol2l1@o, d)
+        |((ABool false)::s, g, THELSE(ol1,ol2)::o, d) -> execute(s, g, ol2@o, d)
         |(a::s, g, BIND(x)::o, d ) -> execute(s, (x,a)::g, o, d)
         |(s, g, UNBIND(x)::o, d )-> execute(s, remFirstOcc g x, o, d)
         |(s, g, DEF(1)::MAP(v,ol)::o, d) -> execute([],[],ol@[BINDRET],(s, g, BIND(v)::o)::d)
         |(s, g, DEF(n)::MAP(v,ol)::o, d) -> execute([],[],ol@[BINDRET],(s, g, BIND(v)::DEF(n-1)::o)::d)
-        |(a::s', g', BINDRET::o', (s, g, BIND(v)::DEF(n)::o)::d ) -> (s, (v,a)::g, DEF(n)::o, d)
+        |(a::s', g', BINDRET::o', (s, g, BIND(v)::DEF(n)::o)::d ) -> execute (s, (v,a)::g, DEF(n)::o, d)
         | _ -> raise TypeMismatch
+        ;;
 
 
 
