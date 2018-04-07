@@ -228,11 +228,16 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | _ -> raise MalformedExp
 
 (* For Tuples or anything, make a tuple of closures, because the unit is NOT exp, it's closures *)
+exception NotValueClosure
+let unpack (vcl:closure) = match vcl with
+        VClosure (g, ans) -> ans
+        | _ -> raise NotValueClosure
 
- (* let e1 = Apply( (Lambda(Var "x" , ADD(V (Var "x"),C(3)))) , C(7) ) ;;
-execute( [], [], (compile e1) , [] );;
- let e2 = Ifte(true, e1, C(5));;
-execute( [], [], (compile e2) , [] );;
- let e3 = Let( Var "y" , e2, Mul(V (Var "y"),C(2) ) );;
-execute( [], [], (compile e3) , [] );;
-  *)
+
+ let e1 = Apply( (Lambda(Var "x" , ADD(V (Var "x"),C(3)))) , C(7) ) ;;
+unpack (execute( Cl ([], e1) , [] ));;
+ let e2 = Ifte(B true, e1, C(5));;
+unpack (execute( Cl ([], e2) , [] ));; 
+ let e3 = Let( Var "y" , e2, MUL(V (Var "y"),C(2) ) );;
+unpack (execute( Cl ([], e3) , [] ));;
+ 
