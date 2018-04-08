@@ -66,7 +66,7 @@ type exp =  NExp
             (* | Apply of exp * exp *)
             | Ifte of exp * exp * exp | IFTE_ of exp * exp
             (* If e1 then e2 else e3 ^^ *)
-            | Let of variable * exp * exp | LET_ of variable * exp
+            | Let of variable * exp * exp | LET_ of variable * exp | UNLET of variable
             (* Let x = e1 in e2 ^^ *)
             | Def of ((variable * closure) list)
             | RetTable of table
@@ -93,7 +93,14 @@ let rec lookup (gamma:table) ((Var s):variable) : closure = match gamma with
       [] -> Null 
       | (Var str , cl)::tl -> if (s = str) then (cl) else (lookup tl (Var s))
       ;;
-                  
+
+let rec remFirstOcc (g:table) (v:variable) : table = 
+      let rec rfo g v gn = match g with
+          [] -> gn 
+          | (x, cl)::tl -> if(x = v) then (gn@tl) else (rfo tl v (gn@[(x,cl)])) 
+          in
+          rfo g v []
+          ;;          
 (* Make an unpack function *)
 
 exception NullClosure
@@ -210,8 +217,9 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | ( Cl (gamma, B true ) , OPCl(IFTE_(e2, e3))::stack ) -> execute( Cl(gamma, e2) , stack )
         | ( Cl (gamma, B false) , OPCl(IFTE_(e2, e3))::stack ) -> execute( Cl(gamma, e3) , stack )
 
-        | ( Cl (gamma, Let(v, e1, e2)) , stack ) -> execute( Cl (gamma, e1) , OPCl(LET_(v, e2))::stack )
+        | ( Cl (gamma, Let(v, e1, e2)) , stack ) -> execute( Cl (gamma, e1) , OPCl(LET_(v, e2))::OPCl(UNLET(v))::stack )
         | ( Cl (gamma, a ) , OPCl(LET_(v, e2))::stack ) -> execute( Cl ((v, Cl(gamma,a))::gamma, e2) , stack )
+        | ( Cl (gamma, a ) , OPCl(UNLET(v))::stack ) -> execute( Cl ( remFirstOcc gamma v , a) , stack )
 
         | ( Cl (gamma, Proj(i, Tuple(n, l)) ) , stack ) -> execute( Cl(gamma, List.nth l i) , stack )
        
@@ -282,6 +290,6 @@ unpack (execute( Cl (g, e9) , [] ));;
 
 let e10 = Apply (  function2 , C(55)) ;;
 unpack (execute( Cl (g, e10) , [] ));;
-(* 
-let et = Tuple(2,[C 2; B true]) ;;
-unpack (execute( Cl ([], et) , [] ));; *)
+
+(* let et = Tuple(2,[e3;e4]) ;;
+unpack (execute( Cl (g, et) , [] ));; *)
