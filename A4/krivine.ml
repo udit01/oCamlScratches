@@ -69,6 +69,7 @@ type exp =  NExp
             | Let of variable * exp * exp | LET_ of variable * exp
             (* Let x = e1 in e2 ^^ *)
             | Def of ((variable * closure) list)
+            | RetTable of table
             (* | A of answer *)
 (* Answer of type value closure  *)
 
@@ -115,7 +116,9 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
 
         (* | ( Cl (gamma , A a ) , [] ) -> VClosure(gamma, a) All In one case ?  *)
 
-        | ( Cl (gamma , V v  ) , stack ) -> execute ( lookup gamma v , stack ) 
+        (* | ( Cl (gamma , V v  ) , stack ) -> execute ( match (lookup gamma v) with Cl(tb,exp) ->, (Cl(gamma, Ret ))::stack )  *)
+        | ( Cl (gamma , V v  ) , stack ) -> execute ( (lookup gamma v) , OPCl(RetTable (gamma))::stack )
+        | ( Cl (gamma', e), OPCl(RetTable (gamma))::stack ) -> execute ( Cl(gamma,e) , stack ) 
         | ( Cl (gamma', Lambda(v, exp')) , (Cl(gamma,exp))::stack ) -> execute ( Cl ( (v, Cl(gamma,exp))::gamma' ,  exp' ) , stack ) 
         (* | ( Cl (gamma', Lambda(v, exp')) , [] ) -> raise ExpectedClosureOnStack *)
         | ( Cl (gamma , Apply(exp1,exp2)) , stack) -> execute( Cl(gamma,exp1) , (Cl(gamma,exp2))::stack  ) 
@@ -215,12 +218,12 @@ let rec execute ((clos:closure), (stack:closure list)) = match (clos,stack) with
         | ( Cl (gamma , Tuple (n, hd::tl) ) , stack) -> execute( Cl(gamma, hd ) , ( OPCl(PROCTUPLE(n-1, tl, 0, []))::stack  ))         
         | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( 0, []    ,  0, []))::stack) -> execute( Cl(gamma, TUPLE_(1, [ABool b])) , stack )         
         | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( 0, []    ,  0, []))::stack) -> execute( Cl(gamma, TUPLE_(1, [AInt i])) , stack )         
-        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, (ABool b)::l)) , stack)        
-        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, (AInt i)::l)) , stack)        
-        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, h::t,  1, [ABool b] ))::stack)         
-        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, h::t,  1, [AInt i] ))::stack)         
-        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, (ABool b)::l2))::stack)  
-        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, (AInt i)::l2))::stack)  
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, l@[(ABool b)])) , stack)        
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( 0, []    ,  k, l ))::stack) -> execute( Cl(gamma, TUPLE_(k+1, l@[(AInt i )])) , stack)        
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, t,  1, [ABool b] ))::stack)         
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( k, h::t  ,  0, []))::stack) -> execute( Cl(gamma, h) , OPCl(PROCTUPLE( k-1, t,  1, [AInt i] ))::stack)         
+        | ( Cl (gamma , B b ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, l2@[(ABool b)]))::stack)  
+        | ( Cl (gamma , C i ) , OPCl(PROCTUPLE( m, h1::t1,  n, l2))::stack) -> execute( Cl(gamma, h1), OPCl(PROCTUPLE( m-1, t1, n+1, l2@[(AInt i )]))::stack)  
         (* I think last 2 cases can be unified *)
         
         | ( Cl (gamma, Def(vcll)) , stack) -> execute ( Cl(vcll@gamma, NExp ), stack )
@@ -262,11 +265,11 @@ let function2 = Lambda ( z , DIV( Proj(0, Tuple(2,[V z;C(2)]) ) , C(3) ));;
 let e4 = V y ;;
 unpack (execute( Cl (g, e4) , [] ));;
 
-(* let e5 = Apply(  function1, C(-3) ) ;;
-unpack (execute( Cl (g, e5) , [] ));; *)
-(* 
-let e6 = Tuple ([e1; e2; e3; e4; e5]) ;;
-unpack (execute( Cl (g, e6) , [] ));; *)
+let e5 = Apply(  function1, C(-3) ) ;;
+unpack (execute( Cl (g, e5) , [] ));;
+
+let e6 = Tuple (5, [e1; e2; e3; e4; e5]) ;;
+unpack (execute( Cl (g, e6) , [] ));;
 
 let e7 = NOT( AND (V v1,B true) ) ;; (*False*)
 unpack (execute( Cl (g, e7) , [] ));;
@@ -279,3 +282,6 @@ unpack (execute( Cl (g, e9) , [] ));;
 
 let e10 = Apply (  function2 , C(55)) ;;
 unpack (execute( Cl (g, e10) , [] ));;
+(* 
+let et = Tuple(2,[C 2; B true]) ;;
+unpack (execute( Cl ([], et) , [] ));; *)
