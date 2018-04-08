@@ -303,4 +303,3 @@ execute( [], g, (compile e9) , [] );;
 let e10 = Apply ( L function2 , Const(55)) ;;
 execute( [], g, (compile e10) , [] );;
 
-(* let e11 =  *)

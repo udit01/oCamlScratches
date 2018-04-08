@@ -291,5 +291,3 @@ unpack (execute( Cl (g, e9) , [] ));;
 let e10 = Apply (  function2 , C(55)) ;;
 unpack (execute( Cl (g, e10) , [] ));;
 
-(* let et = Tuple(2,[e3;e4]) ;;
-unpack (execute( Cl (g, et) , [] ));; *)
