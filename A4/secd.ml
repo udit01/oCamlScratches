@@ -181,9 +181,13 @@ let rec lookup (t:table) (v:variable) : ans = match t with
       ;;
 
 exception NotEnoughElems
-let rec takeOutFirstN l n = match l with
-      [] -> if (n = 0) then ([]) else (raise NotEnoughElems)
-      | hd::tl -> if(n = 0) then (hd::tl) else (takeOutFirstN tl (n-1))
+let rec takeOutFirstN l n = 
+      let rec tofn l n fl = match l with
+      [] -> if (n = 0) then (fl) else (raise NotEnoughElems)
+      | hd::tl -> if(n = 0) then (fl) else (tofn tl (n-1) (fl@[hd]))
+      in 
+      List.rev (tofn l n [])
+      ;;
 
 let rec afterN l n = match l with
       [] -> if (n = 0) then ([]) else (raise NotEnoughElems)
@@ -210,16 +214,16 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         (* |(s, g1@(v,a)@g2 , LOOKUP(v)::o, d) -> execute((a)::s, g, o, d) *)
         (* Is the above pattern matching allowed ? and if we have multiple then will it do it correctly ? ie pick the first one ? *)
         |((ABool b)::s, g, NOT::o, d) -> execute((ABool (not b))::s, g, o, d)
-        |((ABool b1)::(ABool b2)::s, g, OR::o, d) -> execute((ABool (b1 || b2))::s, g, o, d)
-        |((ABool b1)::(ABool b2)::s, g, AND::o, d) -> execute((ABool (b1 && b2))::s, g, o, d)
-        |((ABool b1)::(ABool b2)::s, g, XOR::o, d) -> execute((ABool (
+        |((ABool b2)::(ABool b1)::s, g, OR::o, d) -> execute((ABool (b1 || b2))::s, g, o, d)
+        |((ABool b2)::(ABool b1)::s, g, AND::o, d) -> execute((ABool (b1 && b2))::s, g, o, d)
+        |((ABool b2)::(ABool b1)::s, g, XOR::o, d) -> execute((ABool (
                                                       match (b1, b2) with 
                                                           (true,true)   -> false
                                                           |(true,false)  -> true
                                                           |(false,true)  -> true
                                                           |(false,false) -> false
                                                         ))::s, g, o, d)
-        |((ABool b1)::(ABool b2)::s, g, IMPL::o, d) -> execute((ABool (
+        |((ABool b2)::(ABool b1)::s, g, IMPL::o, d) -> execute((ABool (
                                                       match (b1, b2) with 
                                                           (true,true)   -> true
                                                           |(true,false)  -> false
@@ -228,19 +232,19 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
                                                         ))::s, g, o, d)                                                        
         |(s, g, (CONST n)::o, d) -> execute((AInt n)::s, g, o, d)
         |((AInt i)::s, g, ABS::o, d) -> execute((AInt (abs i))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, MOD::o, d) -> execute((AInt( i1 mod i2 ))::s , g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, ADD::o, d) -> execute((AInt(i1 + i2))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, SUB::o, d) -> execute((AInt(i1 - i2))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, MUL::o, d) -> execute((AInt(i1 * i2))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, DIV::o, d) -> execute((AInt(i1 / i2))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, POW::o, d) -> execute((AInt( int_of_float( float_of_int(i1)**float_of_int(i2))))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, MAX::o, d) -> execute((AInt( max i1 i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, MIN::o, d) -> execute((AInt( min i1 i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, EQL::o, d) -> execute((ABool( i1 = i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, GT::o, d) -> execute((ABool( i1 > i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, LT::o, d) -> execute((ABool( i1 < i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, GTE::o, d) -> execute((ABool( i1 >= i2 ))::s, g, o, d)
-        |((AInt i1)::(AInt i2)::s, g, LTE::o, d) -> execute((ABool( i1 <= i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, MOD::o, d) -> execute((AInt( i1 mod i2 ))::s , g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, ADD::o, d) -> execute((AInt(i1 + i2))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, SUB::o, d) -> execute((AInt(i1 - i2))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, MUL::o, d) -> execute((AInt(i1 * i2))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, DIV::o, d) -> execute((AInt(i1 / i2))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, POW::o, d) -> execute((AInt( int_of_float( float_of_int(i1)**float_of_int(i2))))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, MAX::o, d) -> execute((AInt( max i1 i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, MIN::o, d) -> execute((AInt( min i1 i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, EQL::o, d) -> execute((ABool( i1 = i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, GT::o, d) -> execute((ABool( i1 > i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, LT::o, d) -> execute((ABool( i1 < i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, GTE::o, d) -> execute((ABool( i1 >= i2 ))::s, g, o, d)
+        |((AInt i2)::(AInt i1)::s, g, LTE::o, d) -> execute((ABool( i1 <= i2 ))::s, g, o, d)
         (* Instead of using this implementation of tuple I could do it on this stack as well! Doint nothing to answers below, and if I don't have faulty opc *)
         |( s, g, TUP(k)::o, d) -> execute((Atuple( takeOutFirstN s k ))::(afterN s k), g, o, d)
         |((Atuple l)::s, g, PROJ(i)::o, d) -> execute( (List.nth l i)::s, g, o, d )
@@ -259,10 +263,44 @@ let rec execute ((stack: ans list), (gamma:table) , (opcodes:opcode list), dump)
         | _ -> raise TypeMismatch
         ;;
 
- let e1 = Apply( L (Lambda(Var "x" , Add(V (Var "x"),Const(3)))) , Const(7) ) ;;
+(* TEST CASES::::::::::: *)
+
+
+let v1 = Var "a" ;;
+let x = Var "x" ;;
+let y = Var "y" ;;
+
+ let e1 = Apply( L (Lambda(x , Add(V (x),Const(3)))) , Const(7) ) ;;
 execute( [], [], (compile e1) , [] );;
  let e2 = Ifte(true, e1, Const(5));;
 execute( [], [], (compile e2) , [] );;
  let e3 = Let( Var "y" , e2, Mul(V (Var "y"),Const(2) ) );;
 execute( [], [], (compile e3) , [] );;
- 
+
+
+let g = [(x,AInt 1); (y, AInt 2) ; (v1, ABool true)];;
+
+let z = Var "z" ;;
+let function1 = Lambda ( z , Add( Pow(V z, Const(2)) , Abs(V z) )  ) ;;
+let function2 = Lambda ( z , Div( Proj(0, Tuple([V z;Const(2)]) ) , Const(3) ));;
+
+let e4 = V y ;;
+execute( [], g, (compile e4) , [] );;
+let e5 = Apply( L function1, Const(-3) ) ;;
+execute( [], g, (compile e5) , [] );;
+let e6 = Tuple ([e1; e2; e3; e4; e5]) ;;
+execute( [], g, (compile e6) , [] );;
+
+let e7 = Not( And (V v1, true) ) ;; (*False*)
+execute( [], g, (compile e7) , [] );;
+
+let e8 = Xor(e7, Not e7) ;; (*True*)
+execute( [], g, (compile e8) , [] );;
+
+let e9 = Impl(e8, e7) ;; (*False*)
+execute( [], g, (compile e9) , [] );;
+
+let e10 = Apply ( L function2 , Const(55)) ;;
+execute( [], g, (compile e10) , [] );;
+
+(* let e11 =  *)

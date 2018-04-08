@@ -234,10 +234,48 @@ let unpack (vcl:closure) = match vcl with
         | _ -> raise NotValueClosure
 
 
- let e1 = Apply( (Lambda(Var "x" , ADD(V (Var "x"),C(3)))) , C(7) ) ;;
+ (* let e1 = Apply( (Lambda(Var "x" , ADD(V (Var "x"),C(3)))) , C(7) ) ;;
 unpack (execute( Cl ([], e1) , [] ));;
  let e2 = Ifte(B true, e1, C(5));;
 unpack (execute( Cl ([], e2) , [] ));; 
  let e3 = Let( Var "y" , e2, MUL(V (Var "y"),C(2) ) );;
 unpack (execute( Cl ([], e3) , [] ));;
- 
+  *)
+ let v1 = Var "a" ;;
+let x = Var "x" ;;
+let y = Var "y" ;;
+
+ let e1 = Apply( (Lambda(x , ADD(V (x),C(3)))) , C(7) ) ;;
+unpack (execute( Cl ([], e1) , [] ));;
+ let e2 = Ifte(B true, e1, C(5));;
+unpack (execute( Cl ([], e2) , [] ));;
+ let e3 = Let( Var "y" , e2, MUL(V (Var "y"),C(2) ) );;
+unpack (execute( Cl ([], e3) , [] ));;
+
+
+let g = [(x,Cl([],C 1)); (y, Cl([],C 2) ) ; (v1, Cl([],B true))];;
+
+let z = Var "z" ;;
+let function1 = Lambda ( z , ADD( POW(V z, C(2)) , ABS(V z) )  ) ;;
+let function2 = Lambda ( z , DIV( Proj(0, Tuple(2,[V z;C(2)]) ) , C(3) ));;
+
+let e4 = V y ;;
+unpack (execute( Cl (g, e4) , [] ));;
+
+(* let e5 = Apply(  function1, C(-3) ) ;;
+unpack (execute( Cl (g, e5) , [] ));; *)
+(* 
+let e6 = Tuple ([e1; e2; e3; e4; e5]) ;;
+unpack (execute( Cl (g, e6) , [] ));; *)
+
+let e7 = NOT( AND (V v1,B true) ) ;; (*False*)
+unpack (execute( Cl (g, e7) , [] ));;
+
+let e8 = XOR(e7, NOT e7) ;; (*True*)
+unpack (execute( Cl (g, e8) , [] ));;
+
+let e9 = IMPL(e8, e7) ;; (*False*)
+unpack (execute( Cl (g, e9) , [] ));;
+
+let e10 = Apply (  function2 , C(55)) ;;
+unpack (execute( Cl (g, e10) , [] ));;
