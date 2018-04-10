@@ -40,11 +40,11 @@
 %     cartesian product types T1 * ... * Tn  (n>1)
 %     ... possible extension to union types and recursive types...
 % --
-% You will need to define suitable constructors for expressions, definitions, types, etc.
+% You will  need to define suitable constructors for expressions, definitions, types, etc.
 % You need to provide enough test examples to show your type checker works correctly. 
 % --
 % Note that this checker can work as a type inference engine.  However it does not work for polymorphic type inference. 
-%  Show with counter-examples that this is the case.
+%  Show with counter-examples that this is the case. Like Eql is polymorphic ?
 % --
 
 
@@ -65,15 +65,16 @@ lookup( [ vtype( variable(Y), Type) | TL ], variable(X), T ) :-dif(X,Y) , lookup
 hasType(Gamma, variable(X), T) :- lookup(Gamma, variable(X), T).
 
 % do all the same for float ?
-hasType(Gamma, bool(B) , bool) .
-hasType(Gamma, not(B) , bool) .
+hasType( _ , true , bool) .
+hasType( _ , false , bool) .
+hasType(Gamma, not(B) , bool) :- hasType(Gamma, B, bool) .
 hasType(Gamma, or(E1,E2)  , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
 hasType(Gamma, and(E1,E2) , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
 hasType(Gamma, xor(E1,E2) , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
 hasType(Gamma, impl(E1,E2), bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
 
-hasType(Gamma, const(N)  , int) .
-hasType(Gamma, abs(E)    , int) .
+hasType(  _  , const(_)  , int) .
+hasType(Gamma, abs(E)    , int) :- hasType(Gamma, E , int).
 hasType(Gamma, add(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, sub(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, mul(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
@@ -85,6 +86,7 @@ hasType(Gamma, min(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, 
 hasType(Gamma, eql(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, div(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 
+% eql not working as expected
 hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, bool), hasType(Gamma, E2,bool).    
 hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, gt(E1,E2) , bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
@@ -93,17 +95,20 @@ hasType(Gamma, gte(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2,
 hasType(Gamma, lte(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 
 %n tuple of variable size
-hasType(Gamma, tuple([]),ttuple([])).
-hasType(Gamma, tuple( [Head | Tail ]) , ttuple([ TypeHead | TypeTail])) :- hasType(Gamma, Head, TypeHead), hasType(Gamma, Tail, TypeTail) .
+hasType(  _  , tuple([]), cartesianProduct([])).
+hasType(Gamma, tuple([E]),cartesianProduct([T])) :- hasType(Gamma, E, T).
+hasType(Gamma, tuple( [Head | Tail ]) , cartesianProduct([ TypeHead | TypeTail])) :- hasType(Gamma, Head, TypeHead), hasType(Gamma, tuple(Tail), cartesianProduct(TypeTail)) .
 
 hasType(Gamma, ifte(E0, E1, E2) , T) :- hasType(Gamma, E0, bool), hasType(Gamma, E1, T), hasType(Gamma, E2, T).
-hasType(Gamma, letin(variable(X), E1, E2), null ). % is this appropirate ?
-% hasType(Gamma, proj(I, [HD|TL]) )    
+hasType(Gamma, letin(variable(X), E1, E2), T2 ):-hasType(Gamma, E1, T1), hasType([ vtype(variable(X),T1) | Gamma], E2, T2) . % is this appropirate ?
+hasType(Gamma, proj(0 , tuple([HD|TL])), T ) :-hasType(Gamma, HD, T ).
+hasType(Gamma, proj(n , tuple([HD|TL])), T ) :-dif(n,0) , hasType(Gamma, proj(n-1, tuple(TL)), T ).
+
 hasType(Gamma, pair(E1, E2), cartesian(T1, T2)) :- hasType(Gamma, E1, T1), hasType(Gamma, E2, T2).
 
 % hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [vtype(variable(X), T1) | Gamma] , E1, T2 ).
 % Does the below line extract the list form gamma, or append to it ??
-hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( append(vtype(variable(X), T1) , Gamma) , E1, T2 ).
+hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [ vtype(variable(X), T1) | Gamma ], E1, T2 ).
 hasType(Gamma, apply(E1, E2), T) :- hasType(Gamma, E2, I),hasType(Gamma, E1, arrow(I,T)).
 
 
