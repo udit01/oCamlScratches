@@ -48,19 +48,75 @@
 % --
 
 
-variable(X) .
-lookup(Gamma, variable(X), T) .
-cartesian(T1, T2).
-arrow(T1, T2).
-pair(E1, E2).
+% variable(X) .
+% cartesian(T1, T2).
+% arrow(T1, T2).
+% pair(E1, E2).
+% lookup(Gamma, variable(X), T) :- %parse the list recrusively
 
+%appending lists recursively
+% directly use constructors, no need for above ?
 
-hastype(Gamma, variable(X), T) :- lookup(Gamma, variable(X), T).
+% gamma is a list of def(variable, Type)
+lookup( [] , variable(X), T) :- fail. % What and why ?
+lookup( [ vtype( variable(X), Type) | TL ], variable(X), Type ) :- !. %What's that ?
+lookup( [ vtype( variable(Y), Type) | TL ], variable(X), T ) :-dif(X,Y) , lookup(TL, variable(X), T ) .
 
+hasType(Gamma, variable(X), T) :- lookup(Gamma, variable(X), T).
+
+% do all the same for float ?
+hasType(Gamma, bool(B) , bool) .
+hasType(Gamma, not(B) , bool) .
+hasType(Gamma, or(E1,E2)  , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
+hasType(Gamma, and(E1,E2) , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
+hasType(Gamma, xor(E1,E2) , bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
+hasType(Gamma, impl(E1,E2), bool) :- hasType(Gamma, E1, bool) , hasType(Gamma, E2, bool).
+
+hasType(Gamma, const(N)  , int) .
+hasType(Gamma, abs(E)    , int) .
+hasType(Gamma, add(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, sub(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, mul(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, div(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, mod(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, pow(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, max(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, min(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, eql(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, div(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+
+hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, bool), hasType(Gamma, E2,bool).    
+hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, gt(E1,E2) , bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, lt(E1,E2) , bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, gte(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, lte(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+
+%n tuple of variable size
+hasType(Gamma, tuple([]),ttuple([])).
+hasType(Gamma, tuple( [Head | Tail ]) , ttuple([ TypeHead | TypeTail])) :- hasType(Gamma, Head, TypeHead), hasType(Gamma, Tail, TypeTail) .
+
+hasType(Gamma, ifte(E0, E1, E2) , T) :- hasType(Gamma, E0, bool), hasType(Gamma, E1, T), hasType(Gamma, E2, T).
+hasType(Gamma, letin(variable(X), E1, E2), null ). % is this appropirate ?
+% hasType(Gamma, proj(I, [HD|TL]) )    
 hasType(Gamma, pair(E1, E2), cartesian(T1, T2)) :- hasType(Gamma, E1, T1), hasType(Gamma, E2, T2).
 
-hasType(Gamma, abs(variable(X), E1), arrow(T1,T2)) :- hasType( [p(variable(x), T1) | Gamma] , E1, T2 ).
+% hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [vtype(variable(X), T1) | Gamma] , E1, T2 ).
+% Does the below line extract the list form gamma, or append to it ??
+hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( append(vtype(variable(X), T1) , Gamma) , E1, T2 ).
+hasType(Gamma, apply(E1, E2), T) :- hasType(Gamma, E2, I),hasType(Gamma, E1, arrow(I,T)).
+
 
 % type inference
+% hasType(Gamma, E1, T1) :- hasType( [ vtype(X, T1) | Gamma], E2, T2).
+%%%%%%%%%%%HOW TO DO THE POSSIBLE, EXTENSIONS TO CONSTRUCTORS ..... CASE ANALYSIS .... FLOATS?
 
-hasType(Gamma, E1, T1) :- hasType( [p(X, T1) | Gamma], E2, T2).
+%%%%%%%%%%% HOW TO DO RECURSIVE DEFINITIONS.
+
+% why if below ? just concatenate ?
+% typeElaborates
+typeElaborates(Gamma, def(variable(X),E) , append(vtype(variable(X),E),Gamma)).
+typeElaborates(Gamma, seq(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, GammaNew).
+typeElaborates(Gamma, pll(D1, D2), GammaNew) :- dif(intersection(D1, D2), null) , typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, GammaNew).
+typeElaborates(Gamma, loc(D1, D2), append(Gamma,G2)) :- typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, G2).
+%:- typeElaborates()
