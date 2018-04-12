@@ -132,7 +132,8 @@ append([X|Y],Z,[X|W]) :- append(Y,Z,W).
 % typeElaborates(Gamma, def(variable(X),E) , append(vtype(variable(X),E),Gamma)).
 
 % typeElaborates(Gamma, def(variable(X),E) , GammaNew) :- append( [vtype(variable(X),E)],Gamma, GammaNew).
-typeElaborates(Gamma, def(variable(X),E) , [vtype(variable(X),E)]) . 
+typeElaborates(Gamma, def(variable(X),E) , [vtype(variable(X),T)]) :- hasType(Gamma, E, T).
+
 %:- append( [vtype(variable(X),E)],Gamma, GammaNew).
 typeElaborates(Gamma, seq(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1,Gamma,G2), typeElaborates(G2, D2, GammaIncr), append(GammaIncr,G2, GammaNew).
 
