@@ -121,8 +121,27 @@ hasType(Gamma, apply(E1, E2), T) :- hasType(Gamma, E2, I),hasType(Gamma, E1, arr
 
 % why if below ? just concatenate ?
 % typeElaborates
-typeElaborates(Gamma, def(variable(X),E) , append(vtype(variable(X),E),Gamma)).
-typeElaborates(Gamma, seq(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, GammaNew).
-typeElaborates(Gamma, pll(D1, D2), GammaNew) :- dif(intersection(D1, D2), null) , typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, GammaNew).
-typeElaborates(Gamma, loc(D1, D2), append(Gamma,G2)) :- typeElaborates(Gamma, D1, G1), typeElaborates(G1, D2, G2).
+append([],X,X).                            
+append([X|Y],Z,[X|W]) :- append(Y,Z,W).  
+
+% intersection([], _, []).
+% intersection([H1|T1], L2, [H1|Res]) :-    member(H1, L2),    intersection(T1, L2, Res).
+% intersection([_|T1], L2, Res) :-    intersection(T1, L2, Res).
+
+
+% typeElaborates(Gamma, def(variable(X),E) , append(vtype(variable(X),E),Gamma)).
+
+% typeElaborates(Gamma, def(variable(X),E) , GammaNew) :- append( [vtype(variable(X),E)],Gamma, GammaNew).
+typeElaborates(Gamma, def(variable(X),E) , [vtype(variable(X),E)]) . 
+%:- append( [vtype(variable(X),E)],Gamma, GammaNew).
+typeElaborates(Gamma, seq(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1,Gamma,G2), typeElaborates(G2, D2, GammaIncr), append(GammaIncr,G2, GammaNew).
+
+% typeElaborates(Gamma, pll(def(variable(X),_), def(variable(X),_)), GammaNew ) :- !.
+typeElaborates(Gamma, pll(def(variable(X),E1), def(variable(Y),E2)), GammaNew) :- dif( X, Y ), % after this, as if seq
+                                                                                typeElaborates(Gamma, def(variable(X),E1), G1),
+                                                                                typeElaborates(Gamma, def(variable(Y),E2), G2),
+                                                                                append(G1, Gamma, Gpr),
+                                                                                append(G2, Gpr, GammaNew).
+
+typeElaborates(Gamma, loc(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1, Gamma, Gtemp), typeElaborates(Gtemp, D2, Gincr),append(Gincr,Gamma ,GammaNew).
 %:- typeElaborates()
