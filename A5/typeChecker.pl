@@ -101,8 +101,9 @@ hasType(Gamma, tuple( [Head | Tail ]) , cartesianProduct([ TypeHead | TypeTail])
 
 hasType(Gamma, ifte(E0, E1, E2) , T) :- hasType(Gamma, E0, bool), hasType(Gamma, E1, T), hasType(Gamma, E2, T).
 hasType(Gamma, letin(variable(X), E1, E2), T2 ):-hasType(Gamma, E1, T1), hasType([ vtype(variable(X),T1) | Gamma], E2, T2) . % is this appropirate ?
-hasType(Gamma, proj(0 , tuple([HD|TL])), T ) :-hasType(Gamma, HD, T ).
-hasType(Gamma, proj(n , tuple([HD|TL])), T ) :-dif(n,0) , hasType(Gamma, proj(n-1, tuple(TL)), T ).
+hasType(Gamma, proj(const(0) , tuple([HD|TL])), T ) :-hasType(Gamma, HD, T ), !.
+hasType(Gamma, proj(const(N) , tuple([HD|TL])), T ) :- K is N-1,  hasType(Gamma, proj(const(K), tuple(TL)), T ).
+% hasType(Gamma, proj(n , tuple([HD|TL])), T ) :- dif(n,0) , hasType(Gamma, proj(n-1, tuple(TL)), T ).
 
 hasType(Gamma, pair(E1, E2), cartesian(T1, T2)) :- hasType(Gamma, E1, T1), hasType(Gamma, E2, T2).
 
