@@ -159,7 +159,7 @@ typeElaborates(Gamma, loc(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),ap
 
 
 % definitions 
-% typeElaborates( [] , def(variable(X), add(const(3),const(5))), Gn).
+% typeElaborates( [] , def(variable(X), add(const(3),const(5cd eva  ))), Gn).
 
 % % works because diff varaibles def parallel 
 % typeElaborates( [] , pll(def((variable(X), sub(const(3),const(5)))), def((variable(Y), mul(const(1),const(2))))), Gn).
