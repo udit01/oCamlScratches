@@ -1,3 +1,7 @@
+% Udit Jain
+% 2016CS10327
+
+
 % In this assignment, you will write a type-checker for a simple functional language.
 %  You need to write a Prolog predicate hastype(Gamma, E, T), where 
 %     Gamma is a list of variable-type pairs, representing type assumptions on variables
@@ -48,19 +52,10 @@
 % --
 
 
-% variable(X) .
-% cartesian(T1, T2).
-% arrow(T1, T2).
-% pair(E1, E2).
-% lookup(Gamma, variable(X), T) :- %parse the list recrusively
-
-%appending lists recursively
-% directly use constructors, no need for above ?
-
-% gamma is a list of def(variable, Type)
-lookup( [] , variable(X), T) :- fail. % What and why ?
-lookup( [ vtype( variable(X), Type) | TL ], variable(X), Type ) :- !. %What's that ?
-lookup( [ vtype( variable(Y), Type) | TL ], variable(X), T ) :-dif(X,Y) , lookup(TL, variable(X), T ) .
+% gamma is a list of typeVar(variable, Type)
+lookup( [] , variable(X), T) :- fail. 
+lookup( [ typeVar( variable(X), Type) | TL ], variable(X), Type ) :- !.
+lookup( [ typeVar( variable(Y), Type) | TL ], variable(X), T ) :-dif(X,Y) , lookup(TL, variable(X), T ) .
 
 hasType(Gamma, variable(X), T) :- lookup(Gamma, variable(X), T).
 
@@ -83,12 +78,9 @@ hasType(Gamma, mod(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, 
 hasType(Gamma, pow(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, max(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, min(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
-hasType(Gamma, eql(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, div(E1,E2), int) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 
-% eql not working as expected
-hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, bool), hasType(Gamma, E2,bool).    
-hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
+hasType(Gamma, eql(E1,E2), bool) :- hasType(Gamma, E1, T), hasType(Gamma, E2,T).    
 hasType(Gamma, gt(E1,E2) , bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, lt(E1,E2) , bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
 hasType(Gamma, gte(E1,E2), bool) :- hasType(Gamma, E1, int) , hasType(Gamma, E2, int).
@@ -100,21 +92,21 @@ hasType(Gamma, tuple([E]),cartesianProduct([T])) :- hasType(Gamma, E, T).
 hasType(Gamma, tuple( [Head | Tail ]) , cartesianProduct([ TypeHead | TypeTail])) :- hasType(Gamma, Head, TypeHead), hasType(Gamma, tuple(Tail), cartesianProduct(TypeTail)) .
 
 hasType(Gamma, ifte(E0, E1, E2) , T) :- hasType(Gamma, E0, bool), hasType(Gamma, E1, T), hasType(Gamma, E2, T).
-hasType(Gamma, letin(variable(X), E1, E2), T2 ):-hasType(Gamma, E1, T1), hasType([ vtype(variable(X),T1) | Gamma], E2, T2) . % is this appropirate ?
+hasType(Gamma, letin(variable(X), E1, E2), T2 ):-hasType(Gamma, E1, T1), hasType([ typeVar(variable(X),T1) | Gamma], E2, T2) . % is this appropirate ?
 hasType(Gamma, proj(const(0) , tuple([HD|TL])), T ) :-hasType(Gamma, HD, T ), !.
 hasType(Gamma, proj(const(N) , tuple([HD|TL])), T ) :- K is N-1,  hasType(Gamma, proj(const(K), tuple(TL)), T ).
 % hasType(Gamma, proj(n , tuple([HD|TL])), T ) :- dif(n,0) , hasType(Gamma, proj(n-1, tuple(TL)), T ).
 
 hasType(Gamma, pair(E1, E2), cartesian(T1, T2)) :- hasType(Gamma, E1, T1), hasType(Gamma, E2, T2).
 
-% hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [vtype(variable(X), T1) | Gamma] , E1, T2 ).
+% hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [typeVar(variable(X), T1) | Gamma] , E1, T2 ).
 % Does the below line extract the list form gamma, or append to it ??
-hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [ vtype(variable(X), T1) | Gamma ], E1, T2 ).
+hasType(Gamma, lambda(variable(X), E1), arrow(T1,T2)) :- hasType( [ typeVar(variable(X), T1) | Gamma ], E1, T2 ).
 hasType(Gamma, apply(E1, E2), T) :- hasType(Gamma, E2, I),hasType(Gamma, E1, arrow(I,T)).
 
 
 % type inference
-% hasType(Gamma, E1, T1) :- hasType( [ vtype(X, T1) | Gamma], E2, T2).
+% hasType(Gamma, E1, T1) :- hasType( [ typeVar(X, T1) | Gamma], E2, T2).
 %%%%%%%%%%%HOW TO DO THE POSSIBLE, EXTENSIONS TO CONSTRUCTORS ..... CASE ANALYSIS .... FLOATS?
 
 %%%%%%%%%%% HOW TO DO RECURSIVE DEFINITIONS.
@@ -129,20 +121,51 @@ append([X|Y],Z,[X|W]) :- append(Y,Z,W).
 % intersection([_|T1], L2, Res) :-    intersection(T1, L2, Res).
 
 
-% typeElaborates(Gamma, def(variable(X),E) , append(vtype(variable(X),E),Gamma)).
+% define a variable bound to something, which will return a new Gamma,
 
-% typeElaborates(Gamma, def(variable(X),E) , GammaNew) :- append( [vtype(variable(X),E)],Gamma, GammaNew).
-typeElaborates(Gamma, def(variable(X),E) , [vtype(variable(X),T)]) :- hasType(Gamma, E, T).
+typeElaborates(Gamma, def(variable(X),E) , [typeVar(variable(X),T)]) :- hasType(Gamma, E, T).
 
-%:- append( [vtype(variable(X),E)],Gamma, GammaNew).
+    
+% seq is sequential definitions x = D1 ; y = D2
+    
 typeElaborates(Gamma, seq(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1,Gamma,G2), typeElaborates(G2, D2, GammaIncr), append(GammaIncr,G2, GammaNew).
 
-% typeElaborates(Gamma, pll(def(variable(X),_), def(variable(X),_)), GammaNew ) :- !.
+
+% pll is parallel definitions x = D1 || y = D2
 typeElaborates(Gamma, pll(def(variable(X),E1), def(variable(Y),E2)), GammaNew) :- dif( X, Y ), % after this, as if seq
                                                                                 typeElaborates(Gamma, def(variable(X),E1), G1),
                                                                                 typeElaborates(Gamma, def(variable(Y),E2), G2),
                                                                                 append(G1, Gamma, Gpr),
                                                                                 append(G2, Gpr, GammaNew).
 
+% local is (Define x = D1 in D2 ) 
 typeElaborates(Gamma, loc(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1, Gamma, Gtemp), typeElaborates(Gtemp, D2, Gincr),append(Gincr,Gamma ,GammaNew).
-%:- typeElaborates()
+
+
+
+% Examples
+
+% Quries for type inference (of variables and type). Replacing T with the answer and A and B with queries to gets us the type checker. 
+
+% hasType( G, true , T ).
+% hasType( [typeVar(variable(X),int)],variable(X) , T ).
+% hasType( [typeVar(variable(X),int)],add(variable(X),const(3)) , T ).
+% hasType( [] , and(A,B) , T).
+% hasType( [] , and(A,B) , T).
+% hasType( [] , pow(A,B) , T).
+% hasType( [] , const(A) , T).
+% hasType( [] , and(A,B) , T).
+% hasType( [] , eql(A,B) , T).
+
+
+% definitions 
+% typeElaborates( [] , def(variable(X), add(const(3),const(5))), Gn).
+
+% % works because diff varaibles def parallel 
+% typeElaborates( [] , pll(def((variable(X), sub(const(3),const(5)))), def((variable(Y), mul(const(1),const(2))))), Gn).
+
+% % failes because multiple defnitions of same variable parallely
+% typeElaborates( [] , pll(def((variable(X), sub(const(3),const(5)))), def((variable(X), mul(const(1),const(2))))), Gn).
+
+% % Polymorphic type infrence doesn't work, as this query gets stuck in an infinite loop of checking predicates :
+% hasType( [] , eql(and(A,B) , add(X,Y)) , bool ).
