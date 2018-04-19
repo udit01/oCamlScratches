@@ -36,7 +36,7 @@ hasType([ typeVar(variable(r), arrow( bool, bool)), typeVar(variable(s), bool), 
 
 
 %n- tuple
-hasType([ typeVar(variable(x), bool ),  typeVar(variable(w), bool )],  tuple(variable(x), variable(w), and(variable(x), variable(y))), cartesianProduct([ bool,  bool]) ).
+hasType([ typeVar(variable(x), bool ),  typeVar(variable(w), bool )],  tuple([variable(x), variable(w), and(variable(x), variable(y))]), cartesianProduct([ bool,  bool]) ).
 
 %projection
 hasType([ typeVar(variable(y), bool ),  typeVar(variable(z), bool )], proj( const(1) ,tuple( [variable(x), variable(w), and(variable(x), variable(y)) ] )) , bool ).

@@ -140,6 +140,8 @@ typeElaborates(Gamma, pll(def(variable(X),E1), def(variable(Y),E2)), GammaNew) :
 
 % local is (Define x = D1 in D2 ) 
 typeElaborates(Gamma, loc(D1, D2), GammaNew) :- typeElaborates(Gamma, D1, G1),append(G1, Gamma, Gtemp), typeElaborates(Gtemp, D2, Gincr),append(Gincr,Gamma ,GammaNew).
+% typeElaborates(Gamma, loc(D1, D2), GammaIncr) :- typeElaborates(Gamma, D1, G1),append(G1, Gamma, Gtemp), typeElaborates(Gtemp, D2, Gincr).
+    % ,append(Gincr,Gamma ,GammaNew).
 
 
 

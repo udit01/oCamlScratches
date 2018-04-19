@@ -291,3 +291,6 @@ unpack (execute( Cl (g, e9) , [] ));;
 let e10 = Apply (  function2 , C(55)) ;;
 unpack (execute( Cl (g, e10) , [] ));;
 
+let e = GT ( C 3 , C 5 );;
+unpack (execute( Cl (g, e) , [] ));;
+
