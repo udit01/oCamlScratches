@@ -1,0 +1,4 @@
+Manipulation of 
+What's a tool for text manipulation ?
+
+variable(SOMETHING) , typevar(SOMETHING2) --> typeVar(variable(SOMETHING), SOMETHING2)
