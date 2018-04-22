@@ -35,10 +35,11 @@ type clause = F of fact | R of rule ;;
 type program = clause list ;;
 type goal = atom list ;; *)
 
+type symbol = Sym of string ;;
 type variable = Const of int | T of term | Var of string 
-and term = V of variable | C of int | Func of (int) * (term list) ;;
+and term = V of variable | Func of (symbol) * (term list) ;;
 
-type atom = Cut | Fail | A of (int) * (term list) ;;
+type atom = Cut | Fail | T of term ;;
 (* ^ Predicate sybol or 'constructor' of Prolog *)
 
 (* type fact = H of atom ;; *)
@@ -48,96 +49,163 @@ type clause = Clause of (atom) * (atom list) ;;
 (* First is automatic head and others inside body *)
 
 type program = clause list ;;
-type goal = atom list ;;
+type goal = atom ;;
+type substitution = (variable * term) list;;
 
-(* Define substitution function  *)
-(* Define unify function  *)
+let rec map f l = match l with
+	  [] -> []
+  | x::xs -> (f x)::(map f xs);;
+
+let rec foldl f e l = match l with
+	  [] -> e
+  | x::xs -> foldl f (f(x,e)) xs;;
+let rec vars t = 
+  (** [val vars : term -> variable list = <fun>]  *)
+  match t with
+	  V x -> [x]
+  | Func(sym, []) -> []
+  | Func(sym, l) -> let rec union (x,y) = match x with
+                        [] -> y
+                      | x::xs -> if (List.mem x y) then union (xs, y) else x::(union (xs, y)) in
+  			foldl union [] (map vars l);; 
+
+let rec subst (s:substitution) (x:term) = 
+  match x with
+	 V v -> let rec find v s = match s with
+                [] -> V v
+                | (a,b)::xs -> if (v = a) then b else find v xs in
+                find v s
+        | Func(sym, l) -> if (l = []) then (Func(sym, l))
+                else let subst1 x = subst s x in
+                Func(sym, map subst1 l);;
+
+let compose (s1:substitution) (s2:substitution) : substitution = 
+  (** [val compose : substitution -> substitution -> substitution = <fun>]  *)
+  (* let s1 = (match bs1 with (true,l)-> l) *)
+  let s1' (a,b) = (a, subst s2 b) in
+  let s1s2 = map s1' s1 in 
+  let rec sigma2 l = match l with
+     [] -> []
+   | (a,b)::xs -> let rec member a l = match l with
+                    [] -> false
+                  | (v,t)::xs -> if (a = v) then true else member a xs in
+  if member a s1s2 then sigma2 xs else [(a,b)]@(sigma2 xs) in
+  let rec rm_id l = match l with
+     [] -> []
+   | (a,b)::xs -> if (V a = b) then (rm_id xs) else (a,b)::(rm_id xs) in
+  rm_id (s1s2 @ (sigma2 s2));;
 
 
-(* let rec interpet (p:program) (g:goal) = match goal with 
-        [] -> true 
-        | hd::tl ->  match (getNextClause p []) with 
-                        [] -> false 
-                        | ph::pt ->  if ((unifyClause hd ph) = TRUE_CLAUSE) then () else (getNextClause pt [ph]) *)
-
-
-(* let rec interpret (p:program) (g:goal) = match (p, g) with 
-        (p, []) -> true 
-        | ( ph::pt , gh::gt) -> ( unify ph gh ) if true then  *)
-
-
-(* type goalStack = GoalSet of (goal list)*(goal list) ;;
-type clauseStack = ClauseSet of (clause list) ;;
-type substStack = SubstSet of ((subst list) list) ;; *)
-
-(* ([] , [g1;g2;g3;g4]) -> ([g1] , [g2;g3;g4]) -> ([g2;g1] , [g3;g4]) -> ([g3;g2;g1] , [g4]) ->  *)
-(* findUnifiableClauses is a function from (goal head) * (program) -> ( clause list) * ((substitution list) list) *)
-(* let rec interpret (p:program) (gstack: goalStack list) (cstack: clauseStack list) (sstack:substStack list) =  *)
-                                                    (* match ( gstack, cstack, sstack ) with 
-            ( GoalSet( dgh::dgt , [] )::gst, ClauseSet( cl )::cst, ss ) ->  interpret p gst cst ss
-            |( GoalSet( dgh::dgt ,gh::gt )::gst, cs, ss ) -> (match (findUnifiableClauses(gh, p)) with 
-                                                        (*Nothing found from this goal, backtrack*)
-                                                        ( [], sll) -> (interpet p (GoalSet(dgt, dgh::gh::gt)::gst) cs ss) 
-                                                        (cl , sll) -> interpet p (GoalSet(gh::dgh::dgt, gt)::gst) (ClauseSet( cl )::cs) (SubstSet( sll )::ss) )
-            |( GoalSet( dgh::dgt ,gh::gt )::gst, ClauseSet( [] )::cst, ss ) -> (match (findUnifiableClauses(gh, p)) with  *)
-type subst = variable * term ;;
-type gstackfull = (subst list)*(((goal)*(program)) list) ;;
-type goalStack = Gs of  gstackfull;;
-
-(* 
-let rec mgu t u : substitution = 
+exception InvalidArgs ;;
+let rec mgu t u : (bool*substitution) = 
   (** [val mgu : term -> term -> substitution = <fun>]  *) 
   match (t, u) with
-	  (V x, V y) -> if (x = y) then [] else [(x, V y)]
-  | (V x, Node(sym, [])) -> [(x, Node(sym, []))]
-  | (Node(sym, []), V x) -> [(x, Node(sym, []))]
-  | (V x, Node(sym, l)) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE 
-                           else [(x, Node(sym, l))]
-  | (Node(sym, l), V x) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE
-                           else [(x, Node(sym, l))]
-  | (Node(sym, []), Node(sym', [])) -> if (sym = sym') then [] else raise NOT_UNIFIABLE
-  | (Node(sym, t'), Node(sym', u')) -> if (List.length t' = List.length u' && sym = sym') then
-  				let rec fold sigma t u = match (t,u) with
-                  ([],[]) -> sigma
-                | (t1::tr, u1::ur) -> fold (compose sigma (mgu (subst sigma t1) (subst sigma u1))) tr ur
-                | _ -> raise Error in
-          fold [] t' u'
-          else raise NOT_UNIFIABLE;;  *)
+	  (V x, V y) -> if (x = y) then (true, []) else (true, [(x, V y)])
+  | (V x, Func(sym, [])) -> (true, [(x, Func(sym, []))])
+  | (Func(sym, []), V x) -> (true, [(x, Func(sym, []))])
+  | (V x, Func(sym, l)) -> if (List.mem x (vars (Func(sym, l)))) then (false, []) 
+                           else (true, [(x, Func(sym, l))])
+  | (Func(sym, l), V x) -> if (List.mem x (vars (Func(sym, l)))) then (false, [])
+                           else (true, [(x, Func(sym, l))])
+  | (Func(sym, []), Func(sym', [])) -> if (sym = sym') then (true, []) else (false, [])
+  | (Func(sym, t'), Func(sym', u')) -> if ((List.length t' = List.length u') && (sym = sym')) then
+  				( 
+                                let rec fold sigma t u = match (t,u) with
+                                        ([],[]) -> sigma
+                                        | (t1::tr, u1::ur) -> fold (compose sigma (match (mgu (subst sigma t1) (subst sigma u1)) with 
+                                                                                        (true, l) -> l 
+                                                                                        |(false,l) -> raise InvalidArgs )) tr ur
+                                        | _ -> raise InvalidArgs 
+                                        in
+                                try (true, (fold [] t' u'))
+                                with InvalidArgs -> (false, [])
+                                )
+                                else (false, [])
+;; 
 
-
-(* let unifyCurrier unify t1 t2 =  *)
-(* Unification of atoms directly *)
-let rec unify a1 a2 = match (a1, a2) with 
-        ([],[]) -> (true, [])
-        |(A(i, tl1), A(j, tl2)) -> if (i = j) then (List.map unify tl1 tl2) else (false, []) 
+let unify a1 a2 = match (a1, a2) with 
+        (T t1,T t2) -> mgu (t1) (t2) 
+        | _ -> (false, [])
+;;
+let appendProgs pf goal = (goal, pf)
 ;;
 let rec searchAndUnify pf (goal, prog) = match prog with 
         [] -> (false, [], [], goal, [])
         | (Clause(head, body)::tl) -> (match (unify goal head ) with 
-                                        (false, sl) -> searchAndUnify pf (goal, tl)
-                                        |(true, sl) -> (true, sl, body, goal, tl)
+                                        (false, _ ) -> searchAndUnify pf (goal, tl)
+                                        |(true, sl) -> (true, sl, List.map (appendProgs pf) body, goal, tl)
                                         )
 ;;
 
-let rec interpret p (gs:gstackfull) (dump:goalStack list) = match (gs,dump) with 
-                ( (csl, []) , ([])  ) -> PASS (*or done ?*)
+
+(* List.map (atomify) ( List.map (subst nsl) (List.map clean (gl@gpl)) )  *)
+(* from a goal* prog list i want goal * prog list ie substituted *)
+exception Unsubst
+let substitute substitution gpl = 
+let rec substituteInst substitution gplf  goalproglist = match goalproglist with 
+        (T t, prog)::tl -> substituteInst (substitution) (gplf@[ (T(subst substitution t), prog) ]) (tl)
+        | _ -> raise Unsubst 
+        in
+        substituteInst substitution [] gpl 
+;;
+
+let clean (g,prog) = match g with 
+        T t -> t 
+        (* | _ ->   *)
+;;
+let atomify term = T term ;;
+
+type gstackfull = (substitution)*(((goal)*(program)) list) ;;
+type goalStack = Gs of  gstackfull;;
+
+type answers = END | FAILED | MORE ;;
+
+exception Dempty ;;
+let rec interpret (p:program) (gs:gstackfull) (dump:goalStack list) = match (gs,dump) with 
+                ( (csl, []) , ([])  ) -> END  (*or done ?*)
                 (* DO the below thing on pressing tab to search for more solutions *)
                 (* And show the csl(current subst list) to viewrs *)
-                |( (csl, []) , (Gs gsf)::d ) -> (interpret p (gsf) (d))
+                |( (csl, []) , (Gs gsf)::d ) -> 
+                                                (csl) ;
+                                                        (interpret p (gsf) (d))
                 (* Pop 1 from dump in case of a cut  *)
-                |( (csl, ( [Cut] , prog )::gpl ) , ((Gs gsf)::d)  ) -> ( interpret p (csl,gpl) (d))
+                |( (csl, ( Cut , prog )::gpl ) , ((Gs gsf)::d)  ) -> ( interpret p (csl,gpl) (d))
                 (* In case of fail, this stack has failed  *)
-                |( (csl, ( [Fail] , prog )::gpl ) , ((Gs gsf)::d)  ) -> ( interpret p (gsf) (d))
+                |( (csl, ( Fail , prog )::gpl ) , ((Gs gsf)::d)  ) -> ( interpret p (gsf) (d))
                 (* In case of other clauses find and match *)
-                |( (csl, ( goal, prog )::gpl ) , ((Gs gsf)::d)  ) -> (match (searchAndUnify  p (goal, prog)) with
+                |( (csl, ( goal, prog )::gpl ) , (d)  ) -> (Printf.printf "Entered"); (match (searchAndUnify  (p) (goal, prog)) with
                                                                 (* sl and prog' should also be empty but i don't care , no unificatoin, no matching*)
                                                                 (* But empty goal stack can also resutl from a fact See about conditions *)
-                                                                (false, sl, [], g, prog' ) -> interpret (p (gsf) (d))
+                                                                (false, _, _, _, _ ) -> (interpret p (match d with ((Gs gsf)::d2) ->gsf | _ -> raise Dempty) (d))
+                                                                (* (false, sl, [], g, prog' ) -> (interpret (p (gsf) (d))) *)
                                                                 (* gl will full prog by their side  *)
                                                                 (* Substitute will subst the whole stack and preserver the side p' *)
-                                                                |(true, sl, gl, g, prog' ) -> let nsl = (compose sl csl) in 
-                                                                                (interpret p ((nsl),( substitute nsl (gl@gpl))) (Gs(csl,((goal,prog')::gpl))::(Gs gsf)::d))
-                                                                | _ -> FAIL
+                                                                |(true, sl, gl, g, prog' ) -> let nsl = (compose sl csl) in (*Change order in compose and see 2*)
+                                                                                (interpret p ((nsl),( substitute nsl (gl@gpl) ) ) (Gs(csl,((goal,prog')::gpl))::d))
+                                                                | _ -> FAILED
                                                                 )
-                (* What to do with current subst list ? *)
                 
+                (* |( (csl, ( goal, prog )::gpl ) , ((Gs gsf)::d)  ) -> (Printf.printf "Entered"); (match (searchAndUnify  (p) (goal, prog)) with
+                                                                (* sl and prog' should also be empty but i don't care , no unificatoin, no matching*)
+                                                                (* But empty goal stack can also resutl from a fact See about conditions *)
+                                                                (false, _, _, _, _ ) -> (interpret p (gsf) (d))
+                                                                (* (false, sl, [], g, prog' ) -> (interpret (p (gsf) (d))) *)
+                                                                (* gl will full prog by their side  *)
+                                                                (* Substitute will subst the whole stack and preserver the side p' *)
+                                                                |(true, sl, gl, g, prog' ) -> let nsl = (compose sl csl) in (*Change order in compose and see 2*)
+                                                                                (interpret p ((nsl),( substitute nsl (gl@gpl) ) ) (Gs(csl,((goal,prog')::gpl))::(Gs gsf)::d))
+                                                                | _ -> FAILED
+                                                                ) *)
+                (* | _ -> (Printf.printf "Match Failed\n") ; FAILED *)
+                (* The above statement is evil  *)
+                ;;
+                (* What to do with current subst list ? *)
+
+let start = [Clause ( T (Func(Sym "start",[V (Var "Z")])), [] ) ]                
+let p1 = start @ [ Clause( T ( Func(Sym "foo" , [ V (Var "X") ] ) ) , [ T ( Func(Sym "start" , [ V (Var "X") ] ) )  ]) ] ;;
+let g1 = T ( Func(Sym "foo", [V (Var "VV")]) ) ;;
+let g2 = T ( Func(Sym "start", [V (Var "VV")]) ) ;;
+let g3 = T ( Func(Sym "start", []) ) ;;
+
+interpret (p1) ([], [(g3,p1)] )  ([]) ;;
+
