@@ -201,8 +201,8 @@ let rec interpret (p:program) (gs:gstackfull) (dump:goalStack list) = match (gs,
                 ;;
                 (* What to do with current subst list ? *)
  *)
-open Printf;;
-open Unix;;
+open Printf ;;
+open Unix ;;
 
 type variable = Var of string ;;
 type symbol = Sym of string;;
@@ -272,6 +272,7 @@ let compose (s1:substitution) (s2:substitution) : substitution =
 
 
 exception NOT_UNIFIABLE;;
+exception Error;;
 
 let rec mgu t u : substitution = 
   (** [val mgu : term -> term -> substitution = <fun>]  *) 
@@ -281,10 +282,10 @@ let rec mgu t u : substitution =
   | (Cons s, V x) -> [x, Cons s] 
 	| (V x, V y) -> if (x = y) then [] else [(x, V y)]
   | (V x, Node(Atom(sym, []))) -> [(x, Node(Atom(sym, [])))]
-  | (Node(Atom(sym, [])), V x) -> [(x, Node(Atom(sym, []))]
-  | (V x, Node(Atom(sym, l))) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE 
+  | (Node(Atom(sym, [])), V x) -> [(x, Node(Atom(sym, [])))]
+  | (V x, Node(Atom(sym, l))) -> if (List.mem x (vars_atom (Atom(sym, l)))) then raise NOT_UNIFIABLE 
                            else [(x, Node(Atom(sym, l)))]
-  | (Node(Atom(sym, l)), V x) -> if (List.mem x (vars (Node(sym, l)))) then raise NOT_UNIFIABLE
+  | (Node(Atom(sym, l)), V x) -> if (List.mem x (vars_atom (Atom(sym, l)))) then raise NOT_UNIFIABLE
                            else [(x, Node(Atom(sym, l)))]
   | (Node(Atom(sym, [])), Node(Atom(sym', []))) -> if (sym = sym') then [] else raise NOT_UNIFIABLE
   | (Node(Atom(sym, t')), Node(Atom(sym', u'))) -> if (List.length t' = List.length u' && sym = sym') then
@@ -311,7 +312,8 @@ let print_vars t = let v = vars t in StringSet.fold (fun x lst -> (Var x)::lst )
 
 let rec find_feasible fn = function
   [] -> (* Printf.printf "failed find_feasible"; flush Pervasives.stdout; *) False
-| hd::tl -> ([Cons "nil"; Var "_A"; Var "_A"]
+| hd::tl -> (
+              (* [Cons "nil"; Var "_A"; Var "_A"] *)
                 match (fn hd) with
                   False -> find_feasible fn tl
                 | True ans -> (True ans)
@@ -327,21 +329,12 @@ let rec modify_prog program = function
   [] -> List.rev program
 | cl :: tl -> modify_prog ((modify_clause cl)::program) tl
 and modify_clause = function
-|Clause(atom, atoml) -> Clause (modify_atm atom, (List.map modify_atm atm_list) )
+|Clause(atom, atoml) -> Clause (modify_atm atom, (List.map modify_atm atoml) )
 and modify_atm (Atom (sy,term_list)) = (Atom (sy, List.map modify_term term_list) )
 and modify_term = function
-| Var s -> Var (s^"_")
+| V (Var s) ->V (Var (s^"_"))
 | Cons s -> Cons s
 | Node at -> Node (modify_atm at)
-;;
-
-let rec string_of_atom (Atom ((Sym sy),trm_list)) = let base = Printf.sprintf "%s( " sy in
-Printf.sprintf "%s)" (List.fold_left (fun a b -> Printf.sprintf "%s%s, " a (string_of_term b) ) base trm_list)
-
-and string_of_term trm = match trm with
-  Var str -> Printf.sprintf "Var(%s)" str
-| Cons str -> Printf.sprintf "Cons(%s)" str
-| Node atm -> Printf.sprintf "(%s)" (string_of_atom atm)
 ;;
 
 let get1char () =
@@ -356,41 +349,54 @@ let get1char () =
 let rec continue_answer () = let () = flush Pervasives.stdout in let ch = get1char() in let () = Printf.printf "\n" in let () = flush Pervasives.stdout in if ch = ';' then true else if ch = '.' then false else
    let () = Printf.printf "Unrecognized option.\nEnter \';\' to continue backtracking \nor enter \'.\' to terminate." in let () = flush Pervasives.stdout in continue_answer()
 ;;
-let print_term trm = Printf.printf "%s " (string_of_term trm);;
-(* let print_ans var unif = StringSet.iter (fun a -> Printf.printf "%s = " a ; print_term (unif a) ; Printf.printf " | " ) var *)
 
 
+let rec string_of_atom (Atom ((Sym sy),trm_list)) = let base = Printf.sprintf "%s( " sy in
+Printf.sprintf "%s)" (List.fold_left (fun a b -> Printf.sprintf "%s%s, " a (string_of_term b) ) base trm_list)
 
-let rec interpret var unifier program goals = match goals with
-  [] -> if(is_neg) then True unifier else (
-                          (* print_ans var unifier; *)
-                          Printf.printf "print_ans here" ;
+and string_of_term trm = match trm with
+  V (Var str) -> Printf.sprintf "V(Var(%s))" str
+| Cons str -> Printf.sprintf "Cons(%s)" str
+| Node atm -> Printf.sprintf "(%s)" (string_of_atom atm)
+;;
+
+(* let print_term trm = Printf.printf "%s " (string_of_term trm);; *)
+let rec print_ans unif = match unif with 
+      [] -> Printf.printf " , "
+      |(Var str, term)::tl -> ( Printf.printf " |  Var(%s) -> %s " str (string_of_term term) ) ; print_ans tl   
+
+
+let rec interpret (unifier:substitution) program goals = match goals with
+  [] ->                 print_ans unifier;
+                          (* Printf.printf "print_ans here" ; *)
                           flush Pervasives.stdout;
                            if (continue_answer () ) then False 
-                           else True unifier)
-| (Atom (Sym("Cut"),[]) ) :: g_tail -> (
+                           else True unifier
+(* | (Atom (Sym("Cut"),[]) ) :: g_tail -> (
                           (* And don't come back !!  *)
                         try
                           let unif2 = (compose (mgu (subst unifier t1) (subst unifier t2)) unifier)
-                          in interpret var unif2 program g_tail
+                          in interpret  unif2 program g_tail
                         with
                           NOT_UNIFIABLE -> False
-                        )
+                        ) *)
 | (Atom (Sym("Fail"),[]) ) :: g_tail -> (False)
 | g_head :: g_tail -> 
             let new_prog = (modify_prog [] program) in
-            find_feasible (fun clause -> try (interpret_clause var unifier new_prog goals clause) with NOT_UNIFIABLE -> False ) new_prog
+            find_feasible (fun clause -> try (interpret_clause unifier new_prog goals clause) with NOT_UNIFIABLE -> False ) new_prog
 
-and interpret_clause var unifier program (g_1::g_rest) clause = match clause with
-  Fact (Head atm) -> let unif2 = (compose (mgu_atm (subst_atm unifier atm) (subst_atm unifier g_1)) unifier ) in interpret var unif2 program g_rest
-| Rule ((Head atm),(Body atm_list)) -> let unif2 = (compose (mgu_atm (subst_atm unifier atm) (subst_atm unifier g_1)) unifier ) in interpret var unif2 program (atm_list @ g_rest)
+and interpret_clause (unifier:substitution) program (g_1::g_rest) clause = match clause with
+  (* Fact (Head atm) -> let unif2 = (compose (mgu_atm (subst_atom unifier atm) (subst_atom unifier g_1)) unifier ) in interpret unif2 program g_rest *)
+| Clause (atm,atm_list) -> let unif2 = (compose (mgu_atm (subst_atom unifier atm) (subst_atom unifier g_1)) unifier ) in interpret unif2 program (atm_list @ g_rest)
 ;;
 
-let start = [Clause ( T (Func(Sym "start",[V (Var "Z")])), [] ) ]                
-let p1 = start @ [ Clause( T ( Func(Sym "foo" , [ V (Var "X") ] ) ) , [ T ( Func(Sym "start" , [ V (Var "X") ] ) )  ]) ] ;;
-let g1 = T ( Func(Sym "foo", [V (Var "VV")]) ) ;;
-let g2 = T ( Func(Sym "start", [V (Var "VV")]) ) ;;
-let g3 = T ( Func(Sym "start", []) ) ;;
 
-interpret (p1) ([], [(g3,p1)] )  ([]) ;;
+let start = [Clause ( (Atom(Sym "start",[V (Var "Z")])), [] ) ]                
+let p1 = start @ [ Clause((Atom(Sym "foo" , [ V (Var "X") ] ) ) , [( Atom(Sym "start" , [ V (Var "X") ] ) )  ]) ] ;;
+let g1 = ( Atom(Sym "foo", [V (Var "Y")]) ) ;;
+let g2 = ( Atom(Sym "start", [V (Var "X")]) ) ;;
+let g3 = ( Atom(Sym "start", []) ) ;;
+
+interpret []  p1 [g1]
+;;
 
