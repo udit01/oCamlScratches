@@ -49,12 +49,12 @@ let rec vars_term t = match t with
   
 and  vars_atom atom = match atom with 
         Atom(sym, []) -> []
-        |Atom(sym, l) ->  let rec union (x,y) = match x with
+        |Atom(sym, l) ->  let rec list_union (x,y) = match x with
                 [] -> y
-                | x::xs -> if (List.mem x y) then union (xs, y) else x::(union (xs, y)) in
-  			foldl union [] (List.map vars_term l)
+                | x::xs -> if (List.mem x y) then list_union (xs, y) else x::(list_union (xs, y)) in
+  			foldl list_union [] (List.map vars_term l)
 
-let rec subst (s:substitution) (x:term) : term = 
+let rec substitute_term (s:substitution) (x:term) : term = 
   match x with
         Cons c -> Cons c
 	      |V v -> let rec find v s = match s with
@@ -62,16 +62,16 @@ let rec subst (s:substitution) (x:term) : term =
                   | (a,b)::xs -> if (v = a) then b else (find v xs )
                   in
                 find v s
-        | Node(atom) -> Node(subst_atom s atom)
-        
-and  subst_atom (s:substitution) (a:atom) : atom = 
+        | Node(atom) -> Node(substitute_atom s atom)
+
+and  substitute_atom (s:substitution) (a:atom) : atom = 
   match a with 
     Atom(sym, []) -> Atom(sym, [])
-    |Atom(sym, l) -> Atom(sym, List.map (subst s) l) 
+    |Atom(sym, l) -> Atom(sym, List.map (substitute_term s) l) 
     ;;
 
-let compose (s1:substitution) (s2:substitution) : substitution = 
-  let s1' (a,b) = (a, subst s2 b) in
+let composition (s1:substitution) (s2:substitution) : substitution = 
+  let s1' (a,b) = (a, substitute_term s2 b) in
   let s1s2 = List.map s1' s1 in 
   let rec sigma2 l = match l with
      [] -> []
@@ -87,14 +87,14 @@ let compose (s1:substitution) (s2:substitution) : substitution =
 
 (* This function is for termianl Input-Output by ; and . keys *)
 let get1char () =
-    let termio = Unix.tcgetattr Unix.stdin in
+    let terminal_io_ = Unix.tcgetattr Unix.stdin in
     let () =
         Unix.tcsetattr Unix.stdin Unix.TCSADRAIN
-            { termio with Unix.c_icanon = false } in
+            { terminal_io_ with Unix.c_icanon = false } in
     let res = input_char Pervasives.stdin in
-    Unix.tcsetattr Unix.stdin Unix.TCSADRAIN termio;
-    res
-
+    Unix.tcsetattr Unix.stdin Unix.TCSADRAIN terminal_io_;
+    res 
+;;
 let rec continue_answer () = let () = flush Pervasives.stdout in let ch = get1char() in let () = Printf.printf "\n" in let () = flush Pervasives.stdout in if ch = ';' then true else if ch = '.' then false else
    let () = Printf.printf "Unrecognized option.\nEnter \';\' to continue backtracking \nor enter \'.\' to terminate." in let () = flush Pervasives.stdout in continue_answer()
 ;;
@@ -120,27 +120,27 @@ let rec mgu t u : substitution =
   | (Node(Atom(sym, t')), Node(Atom(sym', u'))) -> if (List.length t' = List.length u' && sym = sym') then
   				let rec fold_subst sigma t u = match (t,u) with
                   ([],[]) -> sigma
-                | (t1::tr, u1::ur) -> fold_subst (compose sigma (mgu (subst sigma t1) (subst sigma u1))) tr ur
+                | (t1::tr, u1::ur) -> fold_subst (composition sigma (mgu (substitute_term sigma t1) (substitute_term sigma u1))) tr ur
                 | _ -> raise Error in
                 (* Above error shouldn't come *)
           fold_subst [] t' u'
           else raise NOT_UNIFIABLE
   | _ -> raise NOT_UNIFIABLE (*Of the type Cons, Atom*)
 
-and  mgu_atm (Atom (sy1,lst1)) (Atom (sy2,lst2) ) =  if (sy1 <> sy2) || ((List.length lst1) <> (List.length lst2)) then raise NOT_UNIFIABLE
+and  mgu_atom (Atom (sy1,lst1)) (Atom (sy2,lst2) ) =  if (sy1 <> sy2) || ((List.length lst1) <> (List.length lst2)) then raise NOT_UNIFIABLE
           else 	let rec fold sigma t u = match (t,u) with
                   ([],[]) -> sigma
-                | (t1::tr, u1::ur) -> fold (compose sigma (mgu (subst sigma t1) (subst sigma u1))) tr ur
+                | (t1::tr, u1::ur) -> fold (composition sigma (mgu (substitute_term sigma t1) (substitute_term sigma u1))) tr ur
                 | _ -> raise Error in
           fold [] lst1 lst2
 ;;
 
-let rec search_clauses fn = function
+let rec search_clauses func = function
   [] -> (* Printf.printf "failed search_clauses"; flush Pervasives.stdout; *) False
 | hd::tl -> (
               (* [Cons "nil"; Var "_A"; Var "_A"] *)
-                match (fn hd) with
-                  False -> search_clauses fn tl
+                match (func hd) with
+                  False -> search_clauses func tl
                 | True ans -> (True ans)
               )
 ;;
@@ -149,7 +149,6 @@ let rec search_clauses fn = function
   make_new_program changes the variable names in the prog to _+<var_name>
   This is done to ensure that variables names do not mix during unification
 *)
-
 let rec make_new_program program = function
   [] -> List.rev program
 | cl :: tl -> make_new_program ((make_new_clause cl)::program) tl
@@ -189,7 +188,7 @@ let rec interpret (current_substitution:substitution) program goals = match goal
             search_clauses (fun clause -> try (interpret_clause current_substitution new_prog goals clause) with NOT_UNIFIABLE -> False ) new_prog
 
 and interpret_clause (current_substitution:substitution) program (ghead::gtail) clause = match clause with
-| Clause (atm,atm_list) -> let new_unifier = (compose (mgu_atm (subst_atom current_substitution atm) (subst_atom current_substitution ghead)) current_substitution ) 
+| Clause (atm,atm_list) -> let new_unifier = (composition (mgu_atom (substitute_atom current_substitution atm) (substitute_atom current_substitution ghead)) current_substitution ) 
                                 in
                             interpret new_unifier program (atm_list @ gtail)
 ;;
