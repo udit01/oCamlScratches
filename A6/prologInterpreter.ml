@@ -182,6 +182,14 @@ let rec interpret (current_substitution:substitution) program goals = match goal
                           flush Pervasives.stdout;
                            if (continue_answer () ) then False 
                            else True current_substitution
+(* | (Atom (Sym("Cut"),[]) ) :: g_tail -> (
+                          (* And don't come back !!  *)
+                        try
+                          let unif2 = (compose (mgu (subst unifier t1) (subst unifier t2)) unifier)
+                          in interpret  unif2 program g_tail
+                        with
+                          NOT_UNIFIABLE -> False
+                        ) *)
 
 | (Atom (Sym("Fail"),[]) ) :: gtail -> (False)
 | g_head :: g_tail ->  let new_prog = (make_new_program [] program) in
