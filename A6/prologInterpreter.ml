@@ -118,12 +118,12 @@ let rec mgu t u : substitution =
                            else [(x, Node(Atom(sym, l)))]
   | (Node(Atom(sym, [])), Node(Atom(sym', []))) -> if (sym = sym') then [] else raise NOT_UNIFIABLE
   | (Node(Atom(sym, t')), Node(Atom(sym', u'))) -> if (List.length t' = List.length u' && sym = sym') then
-  				let rec fold sigma t u = match (t,u) with
+  				let rec fold_subst sigma t u = match (t,u) with
                   ([],[]) -> sigma
-                | (t1::tr, u1::ur) -> fold (compose sigma (mgu (subst sigma t1) (subst sigma u1))) tr ur
+                | (t1::tr, u1::ur) -> fold_subst (compose sigma (mgu (subst sigma t1) (subst sigma u1))) tr ur
                 | _ -> raise Error in
                 (* Above error shouldn't come *)
-          fold [] t' u'
+          fold_subst [] t' u'
           else raise NOT_UNIFIABLE
   | _ -> raise NOT_UNIFIABLE (*Of the type Cons, Atom*)
 
@@ -146,20 +146,20 @@ let rec search_clauses fn = function
 ;;
 
 (*
-  Modify_prog changes the variable names in the prog to _+<var_name>
+  make_new_program changes the variable names in the prog to _+<var_name>
   This is done to ensure that variables names do not mix during unification
 *)
 
-let rec modify_prog program = function
+let rec make_new_program program = function
   [] -> List.rev program
-| cl :: tl -> modify_prog ((modify_clause cl)::program) tl
-and modify_clause = function
-|Clause(atom, atoml) -> Clause (modify_atm atom, (List.map modify_atm atoml) )
-and modify_atm (Atom (sy,term_list)) = (Atom (sy, List.map modify_term term_list) )
-and modify_term = function
+| cl :: tl -> make_new_program ((make_new_clause cl)::program) tl
+and make_new_clause = function
+|Clause(atom, atoml) -> Clause (make_new_atom atom, (List.map make_new_atom atoml) )
+and make_new_atom (Atom (sy,term_list)) = (Atom (sy, List.map make_new_term term_list) )
+and make_new_term = function
 | V (Var s) ->V (Var (s^"_"))
 | Cons s -> Cons s
-| Node at -> Node (modify_atm at)
+| Node at -> Node (make_new_atom at)
 ;;
 
 let rec string_of_atom (Atom ((Sym sy),trm_list)) = let base = Printf.sprintf "%s( " sy in
@@ -172,25 +172,26 @@ and string_of_term trm = match trm with
 ;;
 
 (* let print_term trm = Printf.printf "%s " (string_of_term trm);; *)
-let rec print_ans unif = match unif with 
+let rec print_unifier unif = match unif with 
       [] -> Printf.printf " , "
-      |(Var str, term)::tl -> ( Printf.printf " |  Var(%s) -> %s " str (string_of_term term) ) ; print_ans tl   
+      |(Var str, term)::tl -> ( Printf.printf " |  Var(%s) -> %s " str (string_of_term term) ) ; print_unifier tl   
 
 
-let rec interpret (unifier:substitution) program goals = match goals with
-  [] ->                 print_ans unifier;
-                          (* Printf.printf "print_ans here" ; *)
+let rec interpret (current_substitution:substitution) program goals = match goals with
+  [] ->                 print_unifier current_substitution;
+                          (* Printf.printf "print_unifier here" ; *)
                           flush Pervasives.stdout;
                            if (continue_answer () ) then False 
-                           else True unifier
+                           else True current_substitution
 
 | (Atom (Sym("Fail"),[]) ) :: gtail -> (False)
-| g_head :: g_tail ->  let new_prog = (modify_prog [] program) in
-            search_clauses (fun clause -> try (interpret_clause unifier new_prog goals clause) with NOT_UNIFIABLE -> False ) new_prog
+| g_head :: g_tail ->  let new_prog = (make_new_program [] program) in
+            search_clauses (fun clause -> try (interpret_clause current_substitution new_prog goals clause) with NOT_UNIFIABLE -> False ) new_prog
 
-and interpret_clause (unifier:substitution) program (ghead::gtail) clause = match clause with
-  (* Fact (Head atm) -> let unif2 = (compose (mgu_atm (subst_atom unifier atm) (subst_atom unifier ghead)) unifier ) in interpret unif2 program gtail *)
-| Clause (atm,atm_list) -> let unif2 = (compose (mgu_atm (subst_atom unifier atm) (subst_atom unifier ghead)) unifier ) in interpret unif2 program (atm_list @ gtail)
+and interpret_clause (current_substitution:substitution) program (ghead::gtail) clause = match clause with
+| Clause (atm,atm_list) -> let new_unifier = (compose (mgu_atm (subst_atom current_substitution atm) (subst_atom current_substitution ghead)) current_substitution ) 
+                                in
+                            interpret new_unifier program (atm_list @ gtail)
 ;;
 
 let start = [Clause ( (Atom(Sym "start",[V (Var "Z")])), [] ) ]                
