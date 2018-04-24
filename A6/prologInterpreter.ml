@@ -2,13 +2,9 @@
 Entry Number -> 2016CS10327 *)
 
 (* Assignment 6: Toy Prolog Interpreter
-
 In this assignment, you will write a simplified version of a Prolog interpreter in OCaml.
-
 You will first define an OCaml data type to represent the structure of a legitimate Prolog program.
-
 Note that you only need to model the abstract syntax in this assignment.
-
     A program is a list of clauses. 
      A clause can either be a fact or a rule. A fact has a head but no body.  A rule has a head and a body.  
     The head is a single atomic formula.  A body is a sequence of atomic formulas.
@@ -17,11 +13,8 @@ Note that you only need to model the abstract syntax in this assignment.
     A goal is a sequence (list) of atomic formulas.
 
 You need to take your implementation of unification to use as the parameter-passing mechanism. (Note: by pretending the predicate symbol is a function symbol, you can perform resolution of goals and program clauses). 
-
 You need to be able to replace a chosen (sub)goal by a (possibly empty) list of subgoals, as found by applying a unifier to the body of a program clause whose head unified with the chosen (sub)goal.
-
 You also need to develop a back-tracking strategy to explore the resolution search space, when a (sub)goal fails.
-
 You should also include some control mechanisms, such as forced failure, and ``cut'' so that one does not backtrack to certain points in the search space. *)
 
 open Printf ;;
@@ -182,14 +175,16 @@ let rec interpret (current_substitution:substitution) program goals = match goal
                           flush Pervasives.stdout;
                            if (continue_answer () ) then False 
                            else True current_substitution
-(* | (Atom (Sym("Cut"),[]) ) :: g_tail -> (
+| (Atom (Sym("Cut"),[]) ) :: g_tail -> (
                           (* And don't come back !!  *)
-                        try
-                          let unif2 = (compose (mgu (subst unifier t1) (subst unifier t2)) unifier)
-                          in interpret  unif2 program g_tail
+                        (* Cut unifies with everyone *)
+                        (try
+                          (* let unif2 = (composition (mgu (subst unifier t1) (subst unifier t2)) unifier) *)
+                           (interpret current_substitution program g_tail)
                         with
-                          NOT_UNIFIABLE -> False
-                        ) *)
+                          NOT_UNIFIABLE -> False) ; False 
+                          (* False after *)
+                        )
 
 | (Atom (Sym("Fail"),[]) ) :: gtail -> (False)
 | g_head :: g_tail ->  let new_prog = (make_new_program [] program) in
@@ -210,3 +205,20 @@ let g3 = ( Atom(Sym "start", []) ) ;;
 interpret []  p1 [g1]
 ;;
 
+let p4 = [ 
+      Clause(Atom(Sym "edge" , [Cons "a" ; Cons "b"]),[]) ; 
+      Clause(Atom(Sym "edge" , [Cons "b" ; Cons "c"]),[]) ;
+      Clause(Atom(Sym "edge" , [Cons "c" ; Cons "a"]),[]) ; 
+      Clause(Atom(Sym "path" , [V (Var "S") ; V (Var "S")]),[]) ; 
+      Clause( Atom(Sym "path" , [V (Var "S") ; V (Var "D")]) , [ (Atom(Sym "edge" , [V (Var "S") ; V (Var "Z")])) ; (Atom(Sym "path" , [V (Var "Z") ; V (Var "D")]))  ] ) 
+      ]
+
+let g4 = ( Atom(Sym "path" , [Cons "a" ; V (Var "X")]) ) ;;
+let g5 = ( Atom(Sym "path" , [Cons "a" ; Cons "b" ]) ) ;;
+
+
+interpret []  p4 [g4]
+;;
+
+interpret []  p4 [g5]
+;;
