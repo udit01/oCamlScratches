@@ -34,7 +34,7 @@ goal:
 
 assertion:
   | atom PERIOD               { Assert ($1, []) }
-  | atom IF clause PERIOD   { Assert ($1, $3) }
+  | atom IF clause PERIOD     { Assert ($1, $3) }
 
 atom:
   | FAIL                      { Fail }
