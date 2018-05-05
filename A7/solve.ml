@@ -1,5 +1,3 @@
-(** The prolog solver. *)
-
 open Syntax
 
 (** A value of type [choice] represents a choice point in the proof
