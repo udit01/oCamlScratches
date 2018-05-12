@@ -1,3 +1,4 @@
+let (|>) x f = f x ;;
 
 let l = [ ("one", "ONE", 1); ("two", "TWO" , 2 ); ("three", "THREE", 3) ] ;;
 let kv = [ ("one", 1); ("two",2 ); ("three", 3) ] ;;
@@ -17,6 +18,8 @@ let build_counts () =
     in
     List.Assoc.add counts line (count + 1)
   )
+
+let (|>) x f = f x ;;
 
 let () =
   build_counts ()

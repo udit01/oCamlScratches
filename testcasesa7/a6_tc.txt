@@ -1,0 +1,39 @@
+Test case 1
+Variables: X, Y
+Constants: john, mary, andrew doe
+Note: andrew doe is one constant i.e. It should be a 2-ary term having a function symbol and two child constant terms
+
+Program:
+    male(john).
+    parent(john).
+    father(X) :- male(X), parent(X).
+    male(andrew doe).
+    female(mary).
+ 
+Goal:
+goal11 = [] (* no goal *)
+goal12 = male(john)
+goal13 = male(andrew)
+goal14 = male(X)
+goal15 = father(john) female(X)
+goal16 = father(X) father(Y)
+
+Test case 2
+Variables: X, Y
+Constants: a,b,c,d
+
+Program:
+    edge(a,b).
+    edge(b,c).
+    edge(c,d).
+    edge(a,d).
+    path(X,Y):- edge(X,Y).
+    path(X,Y):- edge(X,Z),path(Z,Y).
+
+Test case:
+goal21 = path(a,c)
+goal22 = edge(a,X)
+goal23 = path(a,X)
+goal24 = edge(X,Y)
+goal25 = path(X,Y)
+goal26 = path(X,Y), cut

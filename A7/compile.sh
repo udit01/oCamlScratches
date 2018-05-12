@@ -6,4 +6,4 @@ ocamlc -c parser.mli && \
 ocamlc -c parser.ml && \
 ocamlc -c lexer.ml && \
 ocamlc -c main.ml && \
-ocamlmktop -o prolog.top syntax.cmo parser.cmo lexer.cmo main.cmo
+ocamlmktop -o prolog.top syntax.cmo parser.cmo lexer.cmo main.cmoocamlmktop -o prolog.top syntax.cmo parser.cmo lexer.cmo main.cmo
