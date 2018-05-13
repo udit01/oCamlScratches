@@ -7,9 +7,11 @@ Program:
     male(john).
     parent(john).
     father(X) :- male(X), parent(X).
-    male(andrew doe).
     female(mary).
+    
+    male(andrew doe).
  
+
 Goal:
 goal11 = [] (* no goal *)
 goal12 = male(john)
@@ -18,6 +20,17 @@ goal14 = male(X)
 goal15 = father(john) female(X)
 goal16 = father(X) father(Y)
 
+
+Queries:-
+?- male(john).
+?- male(andrew).
+?- male(X).
+?- father(john).
+?- female(X).
+?- father(john), female(X).
+?- father(X), father(Y).
+
+    
 Test case 2
 Variables: X, Y
 Constants: a,b,c,d
@@ -37,3 +50,17 @@ goal23 = path(a,X)
 goal24 = edge(X,Y)
 goal25 = path(X,Y)
 goal26 = path(X,Y), cut
+
+Queries: 
+?- path(a,c).
+?- edge(a,X).
+?- path(a,X).
+?- edge(X,Y).
+?- path(X,Y).
+?- path(X,Y), cut
+
+
+
+
+
+
